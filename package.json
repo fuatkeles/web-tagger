@@ -1,0 +1,12 @@
+{
+  "name": "web-tagger",
+  "version": "1.0.0",
+  "scripts": {
+    "start:frontend": "cd image-converter && npm start",
+    "start:backend": "cd backend && npm start",
+    "dev": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+} 
