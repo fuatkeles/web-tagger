@@ -4,9 +4,9 @@
   left: 0;
   right: 0;
   z-index: 10000;
-  background: rgba(255, 255, 255, 0.9);
+  background-color: var(--nav-background);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
 }
@@ -26,6 +26,11 @@
   align-items: center;
 }
 
+.nav-left {
+  display: flex;
+  align-items: center;
+}
+
 .nav-left .logo {
   display: block;
 }
@@ -35,6 +40,10 @@
   height: auto;
 }
 
+.logo svg path {
+  fill: var(--text-primary);
+}
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -42,10 +51,15 @@
 }
 
 .nav-right a {
-  color: #111;
+  color: var(--text-primary);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+.nav-right a:hover {
+  color: var(--button-primary);
 }
 
 .theme-btn {
@@ -53,9 +67,14 @@
   border: none;
   padding: 0.5rem;
   cursor: pointer;
-  color: #111;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.theme-btn:hover {
+  transform: scale(1.1);
 }
 
 .auth-buttons {
@@ -74,26 +93,145 @@
 
 .btn-login {
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  color: #111;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .btn-login:hover {
-  border-color: #000;
+  border-color: var(--text-primary);
 }
 
 .btn-signup {
-  background: #111;
-  border: 1px solid #111;
-  color: white;
+  background-color: var(--button-primary);
+  border: 1px solid var(--button-primary);
+  color: var(--button-text);
 }
 
 .btn-signup:hover {
-  background: #000;
+  opacity: 0.9;
+}
+
+.btn-google {
+  background-color: var(--button-primary);
+  border: none;
+  color: var(--button-text);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-google svg {
+  font-size: 1.2rem;
+  color: var(--button-text);
+}
+
+.btn-google span {
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.btn-google:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-google:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .btn-google {
+  background-color: var(--button-primary);
+  color: var(--button-text);
+}
+
+body.dark-mode .btn-google:hover {
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
   .nav-container {
     max-width: 90%;
   }
+  
+  .nav-right {
+    gap: 1rem;
+  }
+
+  .auth-buttons {
+    display: none;
+  }
+} 
+
+.theme-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 56px;
+  height: 28px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-track {
+  background: var(--background-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 24px;
+  cursor: pointer;
+  display: flex;
+  height: 24px;
+  position: relative;
+  width: 48px;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-thumb {
+  background: var(--button-primary);
+  border-radius: 50%;
+  height: 20px;
+  width: 20px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+}
+
+body:not(.dark-mode) .theme-toggle-thumb {
+  transform: translate(2px, -50%);
+}
+
+body.dark-mode .theme-toggle-thumb {
+  transform: translate(24px, -50%);
+}
+
+.theme-toggle-thumb svg {
+  color: white;
+  font-size: 12px;
+  transition: opacity 0.25s ease;
+  position: relative;
+  top: 1px;
+}
+
+.theme-toggle:hover .theme-toggle-track {
+  border-color: var(--button-primary);
+}
+
+.theme-toggle:focus {
+  outline: none;
+}
+
+.theme-toggle:focus .theme-toggle-track {
+  box-shadow: 0 0 0 2px var(--button-primary);
 } 

@@ -4,13 +4,12 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import 'leaflet-geosearch/dist/geosearch.css';
-import L from 'leaflet'; // Leaflet'i içe aktarın
+import L from 'leaflet';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { FaUpload, FaTimes, FaMapMarkerAlt, FaBars } from 'react-icons/fa'; // react-icons/fa modülünü içe aktar
-import './App.css'; // Yeni CSS dosyasını içe aktar
-import { FaCheckCircle } from 'react-icons/fa'; // Import the checkmark icon
-import ReactDOMServer from 'react-dom/server'; // ReactDOMServer'ı içe aktarın
+import { FaUpload, FaTimes, FaMapMarkerAlt, FaBars, FaCheckCircle } from 'react-icons/fa';
+import './App.css';
+import ReactDOMServer from 'react-dom/server';
 import { ReactComponent as Logo } from './assets/WebTagger.svg';
 import { ProgressBar } from 'react-loader-spinner';
 import Navbar from './components/Navbar';
@@ -18,7 +17,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import About from './pages/About';
 import { ThemeProvider } from './context/ThemeContext';
-import './styles/theme.css'; // Import theme styles
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
@@ -85,9 +83,9 @@ function App() {
   const [geotagged, setGeotagged] = useState({});
   const [isDragActive, setIsDragActive] = useState(false);
   const [fileNames, setFileNames] = useState([]);
-  const [loading, setLoading] = useState({}); // Add this line to the state declarations
+  const [loading, setLoading] = useState({});
   const [menuActive, setMenuActive] = useState(false);
-  const [fileFormats, setFileFormats] = useState([]); // Yeni state
+  const [fileFormats, setFileFormats] = useState([]);
 
   const toggleMenu = () => {
     setMenuActive(!menuActive);
@@ -97,7 +95,6 @@ function App() {
     const files = Array.from(e.target.files);
     setImages(files);
     setFileNames(files.map(file => file.name.split('.')[0]));
-    // Her dosya için varsayılan format webp olarak ayarla
     setFileFormats(new Array(files.length).fill('webp'));
     setLoading(new Array(files.length).fill(false));
     setGeotagged(new Array(files.length).fill(false));
@@ -117,7 +114,7 @@ function App() {
 
     const updatedImages = [...images];
     const file = updatedImages[index];
-    const extension = file.name.split('.').pop(); // Mevcut uzantıyı al
+    const extension = file.name.split('.').pop();
     Object.defineProperty(file, 'name', {
       writable: true,
       value: `${newName}.${extension}`
@@ -138,7 +135,7 @@ function App() {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
     setImages(files);
-    setFileNames(files.map(file => file.name.replace(/\.[^/.]+$/, ""))); // Uzantıyı kaldır
+    setFileNames(files.map(file => file.name.replace(/\.[^/.]+$/, "")));
     setIsDragActive(false);
   };
 
@@ -161,7 +158,7 @@ function App() {
   const handleAddGeotag = async (index) => {
     const originalFileName = fileNames[index];
     const newFileName = originalFileName.replace(/\s+/g, '-');
-    const format = fileFormats[index] || 'webp'; // Seçilen formatı al
+    const format = fileFormats[index] || 'webp';
 
     if (!location) {
       console.error('Location is not set');
@@ -174,7 +171,7 @@ function App() {
     formData.append('image', images[index]);
     formData.append('latitude', location.lat);
     formData.append('longitude', location.lng);
-    formData.append('format', format); // Format bilgisini ekle
+    formData.append('format', format);
     if (newFileName) {
       formData.append('newFileName', newFileName);
     }
@@ -228,7 +225,6 @@ function App() {
     const zip = new JSZip();
     const folder = zip.folder("images");
   
-    // `convertedImages` nesnesini kontrol et
     for (const [index, imageData] of Object.entries(convertedImages)) {
       try {
         const response = await fetch(imageData.url);
@@ -245,14 +241,14 @@ function App() {
         }
   
         const blob = await response.blob();
-        const fileName = getWebpFileName(images[index]?.name || '', imageData.altText);
-        folder.file(fileName, blob);
+        const baseFileName = fileNames[index].split('.')[0].replace(/\s+/g, '-');
+        const format = fileFormats[index] || 'webp';
+        folder.file(`${baseFileName}.${format}`, blob);
       } catch (error) {
         console.error(`Error fetching image at index ${index}: ${error.message}`);
       }
     }
   
-    // Zip dosyasını oluştur ve indir
     zip.generateAsync({ type: "blob" }).then((content) => {
       saveAs(content, "images.zip");
     });
@@ -269,8 +265,8 @@ function App() {
   }, [images]);
 
   return (
-    <ThemeProvider>
-      <Router>
+    <Router>
+      <ThemeProvider>
         <div className="app-container">
           <Navbar />
           <Routes>
@@ -301,8 +297,8 @@ function App() {
             <Route path="/about" element={<About />} />
           </Routes>
         </div>
-      </Router>
-    </ThemeProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 

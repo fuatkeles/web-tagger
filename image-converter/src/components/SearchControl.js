@@ -12,6 +12,18 @@ const SearchControl = ({ setLocation }) => {
   useEffect(() => {
     const provider = new OpenStreetMapProvider();
 
+    const customIcon = L.divIcon({
+      className: 'custom-icon',
+      html: ReactDOMServer.renderToString(
+        <div style={{ filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.4))' }}>
+          <FaMapMarkerAlt size={48} color="#000000" />
+        </div>
+      ),
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],  // Center horizontally, bottom vertically
+      popupAnchor: [0, -48]  // Center horizontally, above the icon
+    });
+
     const searchControl = new GeoSearchControl({
       provider,
       style: 'bar',
@@ -22,10 +34,7 @@ const SearchControl = ({ setLocation }) => {
       animateZoom: true,
       keepResult: true,
       marker: {
-        icon: L.divIcon({
-          className: 'custom-icon',
-          html: ReactDOMServer.renderToString(<FaMapMarkerAlt size={50} color="black" />)
-        })
+        icon: customIcon
       }
     });
 
