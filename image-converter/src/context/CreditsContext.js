@@ -8,8 +8,35 @@ const CreditsContext = createContext();
 
 export const useCredits = () => useContext(CreditsContext);
 
-const FREE_CREDITS = 5;
+const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
+
+const getDailyResetTime = () => {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setHours(24, 0, 0, 0);
+  return tomorrow.getTime();
+};
+
+// Force reset credits if they are still at old value
+const currentFreeCredits = parseInt(localStorage.getItem('freeCredits'));
+if (currentFreeCredits === 5) {
+  localStorage.setItem('freeCredits', FREE_CREDITS.toString());
+  localStorage.setItem('lastResetTime', getDailyResetTime().toString());
+}
+
+const checkAndResetDailyCredits = () => {
+  const lastResetTime = localStorage.getItem('lastResetTime');
+  const now = new Date().getTime();
+  
+  if (!lastResetTime || now >= parseInt(lastResetTime)) {
+    localStorage.setItem('freeCredits', FREE_CREDITS.toString());
+    localStorage.setItem('lastResetTime', getDailyResetTime().toString());
+    return FREE_CREDITS;
+  }
+  
+  return parseInt(localStorage.getItem('freeCredits')) || FREE_CREDITS;
+};
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
@@ -51,14 +78,9 @@ export const CreditsProvider = ({ children }) => {
             setMembershipType(userData.membershipType || 'free');
           }
         } else {
-          // Not logged in, use local storage for free credits
-          const storedCredits = localStorage.getItem('freeCredits');
-          if (storedCredits) {
-            setCredits(parseInt(storedCredits));
-          } else {
-            localStorage.setItem('freeCredits', FREE_CREDITS.toString());
-            setCredits(FREE_CREDITS);
-          }
+          // Not logged in, use local storage for free credits with daily reset
+          const currentCredits = checkAndResetDailyCredits();
+          setCredits(currentCredits);
 
           const storedOperations = localStorage.getItem('freeOperations');
           if (storedOperations) {
@@ -72,7 +94,8 @@ export const CreditsProvider = ({ children }) => {
       } catch (error) {
         console.error('Error initializing credits:', error);
         // Fallback to local storage if Firestore fails
-        setCredits(FREE_CREDITS);
+        const currentCredits = checkAndResetDailyCredits();
+        setCredits(currentCredits);
         setOperations([]);
         setMembershipType('free');
       } finally {
@@ -81,6 +104,16 @@ export const CreditsProvider = ({ children }) => {
     };
 
     initializeUserCredits();
+
+    // Add interval to check for daily reset
+    if (!user) {
+      const interval = setInterval(() => {
+        const currentCredits = checkAndResetDailyCredits();
+        setCredits(currentCredits);
+      }, 60000); // Check every minute
+
+      return () => clearInterval(interval);
+    }
   }, [user]);
 
   const deductCredits = async (amount, operationType) => {
@@ -125,7 +158,7 @@ export const CreditsProvider = ({ children }) => {
   const getOperationCost = (type) => {
     switch (type) {
       case 'geotag':
-        return 2;
+        return 3;
       case 'download':
         return 1;
       default:

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
-import { FaUpload, FaTimes, FaCheckCircle, FaImage, FaMapMarkerAlt } from 'react-icons/fa';
-import { ProgressBar } from 'react-loader-spinner';
+import { FaUpload, FaTimes, FaCheckCircle, FaImage, FaMapMarkerAlt, FaCoins, FaGoogle } from 'react-icons/fa';
 import LocationMarker from '../components/LocationMarker';
 import SearchControl from '../components/SearchControl';
 import './Home.css';
@@ -68,15 +67,10 @@ const ImageListItem = ({
               disabled={loading}
             >
               {loading ? (
-                <div className="loading-container">
-                  <ProgressBar
-                    height="20"
-                    width="20"
-                    color="#fff"
-                    ariaLabel="loading"
-                  />
-                  <span>Processing...</span>
-                </div>
+                <>
+                  <div className="button-spinner" />
+                  <span>Adding...</span>
+                </>
               ) : (
                 <>
                   <FaMapMarkerAlt />
@@ -128,7 +122,7 @@ const Home = ({
   handleFormatChange,
   handleAddGeotag: originalHandleAddGeotag
 }) => {
-  const { user } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const { credits, deductCredits, getOperationCost } = useCredits();
   const navigate = useNavigate();
   const [showCreditAlert, setShowCreditAlert] = useState(false);
@@ -179,6 +173,28 @@ const Home = ({
           </p>
         </header>
 
+        <div className="credits-status">
+          <div className="credits-count">
+            <FaCoins />
+            {credits}
+          </div>
+          {!user ? (
+            <div className="credits-extra">
+              <span className="credits-reset">Resets daily</span>
+              <button onClick={signInWithGoogle} className="credits-login">
+                <FaGoogle /> Login with Google
+              </button>
+            </div>
+          ) : (
+            <div className="credits-extra">
+              <span className="credits-reset">Need more?</span>
+              <button onClick={() => navigate('/pricing')} className="credits-login">
+                Upgrade Plan
+              </button>
+            </div>
+          )}
+        </div>
+
         <section className="tools-section">
           <div className="map-box">
             <MapContainer 
@@ -223,14 +239,6 @@ const Home = ({
             <section className="images-section">
               <div className="images-header">
                 <h2>Your Images</h2>
-                <div className="credits-info">
-                  <span>Credits: {credits}</span>
-                  {!user && (
-                    <button onClick={() => navigate('/dashboard')} className="login-for-credits">
-                      Login for more credits
-                    </button>
-                  )}
-                </div>
               </div>
 
               <div className="images-grid">

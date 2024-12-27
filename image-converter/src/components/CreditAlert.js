@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaCoins, FaGoogle, FaHistory, FaSave, FaCloudDownloadAlt } from 'react-icons/fa';
+import { FaCoins, FaGoogle, FaHistory, FaSave, FaCloudDownloadAlt, FaRocket } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import './CreditAlert.css';
 
@@ -33,9 +33,9 @@ const CreditAlert = ({ isOpen, onClose }) => {
             <span className="benefit-text">Start with free credits</span>
           </div>
           <div className="benefit-item">
-            <FaSave className="benefit-icon" />
-            <span className="benefit-title">Save History</span>
-            <span className="benefit-text">Track all operations</span>
+            <FaRocket className="benefit-icon" />
+            <span className="benefit-title">Fast Processing</span>
+            <span className="benefit-text">Lightning-fast conversions</span>
           </div>
           <div className="benefit-item">
             <FaCloudDownloadAlt className="benefit-icon" />
@@ -54,8 +54,8 @@ const CreditAlert = ({ isOpen, onClose }) => {
             </div>
             <div className="package-item premium">
               <span className="package-name">Premium</span>
-              <span className="package-credits">500 credits</span>
-              <span className="package-price">$4.99</span>
+              <span className="package-credits">350 credits</span>
+              <span className="package-price">$9.99</span>
             </div>
           </div>
         </div>
