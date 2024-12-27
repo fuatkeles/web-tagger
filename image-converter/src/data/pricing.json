@@ -1,0 +1,96 @@
+{
+  "pricingPlans": [
+    {
+      "plan": "Basic",
+      "price": "4.99",
+      "period": "month",
+      "credits": "150 credits",
+      "features": [
+        "Image format conversion",
+        "Geolocation tagging"
+      ]
+    },
+    {
+      "plan": "Pro",
+      "price": "9.99",
+      "period": "month",
+      "credits": "350 credits",
+      "features": [
+        "All Basic features",
+        "Pro API"
+      ],
+      "popular": true
+    },
+    {
+      "plan": "Business",
+      "price": "24.99",
+      "period": "month",
+      "credits": "1000 credits",
+      "features": [
+        "All Pro features",
+        "Business API"
+      ]
+    },
+    {
+      "plan": "Lifetime",
+      "price": "199.99",
+      "credits": "10000+ credits",
+      "features": [
+        "One-time payment",
+        "All Business features",
+        "Never expires",
+        "Enterprise API"
+      ],
+      "lifetime": true
+    }
+  ],
+  "features": [
+    {
+      "title": "Advanced Image Conversion",
+      "description": "Convert your images between WebP, PNG, and JPG formats while maintaining quality. WebP offers superior compression for web use, while PNG preserves transparency and JPG ensures wide compatibility."
+    },
+    {
+      "title": "Geotagging Benefits",
+      "description": "Add precise location data to your images' EXIF metadata. Perfect for photographers, travel bloggers, and businesses needing to organize and track image locations. Enhance your content with location context."
+    },
+    {
+      "title": "Batch Processing",
+      "description": "Save time by converting multiple images simultaneously. Our concurrent processing feature lets you handle bulk conversions efficiently, with higher tier plans offering more parallel conversions."
+    },
+    {
+      "title": "API Integration (Coming Soon)",
+      "description": "Automate your image processing workflow with our robust API. From basic integration in Pro plans to advanced enterprise solutions in Business and Lifetime plans, scale your operations efficiently."
+    }
+  ],
+  "apiTiers": [
+    {
+      "title": "Pro API",
+      "description": "Basic REST API access with rate limits",
+      "features": [
+        "100 requests/day",
+        "Basic authentication",
+        "Standard support"
+      ]
+    },
+    {
+      "title": "Business API",
+      "description": "Advanced API features for growing businesses",
+      "features": [
+        "400 requests/day",
+        "OAuth 2.0 support",
+        "Webhook integration",
+        "Priority support"
+      ]
+    },
+    {
+      "title": "Enterprise API",
+      "description": "Full-featured API for enterprise needs",
+      "features": [
+        "1000 requests/day",
+        "Custom integration support",
+        "Advanced security features",
+        "24/7 dedicated support"
+      ]
+    }
+  ]
+} 

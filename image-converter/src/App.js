@@ -17,6 +17,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import About from './pages/About';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import Dashboard from './components/Dashboard';
+import { CreditsProvider } from './context/CreditsContext';
+import Pricing from './pages/Pricing';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
@@ -267,36 +271,42 @@ function App() {
   return (
     <Router>
       <ThemeProvider>
-        <div className="app-container">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={
-              <Home 
-                location={location}
-                setLocation={setLocation}
-                isDragActive={isDragActive}
-                handleDragOver={handleDragOver}
-                handleDragLeave={handleDragLeave}
-                handleDrop={handleDrop}
-                handleFileChange={handleFileChange}
-                images={images}
-                fileNames={fileNames}
-                handleFileNameChange={handleFileNameChange}
-                loading={loading}
-                handleAddGeotag={handleAddGeotag}
-                geotagged={geotagged}
-                convertedImages={convertedImages}
-                handleClear={handleClear}
-                handleDownloadAll={handleDownloadAll}
-                handleClearAll={handleClearAll}
-                allConvertedAndGeotagged={allConvertedAndGeotagged}
-                fileFormats={fileFormats}
-                handleFormatChange={handleFormatChange}
-              />
-            } />
-            <Route path="/about" element={<About />} />
-          </Routes>
-        </div>
+        <AuthProvider>
+          <CreditsProvider>
+            <div className="app-container">
+              <Navbar />
+              <Routes>
+                <Route path="/" element={
+                  <Home 
+                    location={location}
+                    setLocation={setLocation}
+                    isDragActive={isDragActive}
+                    handleDragOver={handleDragOver}
+                    handleDragLeave={handleDragLeave}
+                    handleDrop={handleDrop}
+                    handleFileChange={handleFileChange}
+                    images={images}
+                    fileNames={fileNames}
+                    handleFileNameChange={handleFileNameChange}
+                    loading={loading}
+                    handleAddGeotag={handleAddGeotag}
+                    geotagged={geotagged}
+                    convertedImages={convertedImages}
+                    handleClear={handleClear}
+                    handleDownloadAll={handleDownloadAll}
+                    handleClearAll={handleClearAll}
+                    allConvertedAndGeotagged={allConvertedAndGeotagged}
+                    fileFormats={fileFormats}
+                    handleFormatChange={handleFormatChange}
+                  />
+                } />
+                <Route path="/about" element={<About />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/pricing" element={<Pricing />} />
+              </Routes>
+            </div>
+          </CreditsProvider>
+        </AuthProvider>
       </ThemeProvider>
     </Router>
   );

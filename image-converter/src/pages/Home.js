@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import { FaUpload, FaTimes, FaCheckCircle, FaImage, FaMapMarkerAlt } from 'react-icons/fa';
 import { ProgressBar } from 'react-loader-spinner';
 import LocationMarker from '../components/LocationMarker';
 import SearchControl from '../components/SearchControl';
 import './Home.css';
+import { useAuth } from '../context/AuthContext';
+import { useCredits } from '../context/CreditsContext';
+import { useNavigate } from 'react-router-dom';
+import CreditAlert from '../components/CreditAlert';
 
 const ImageListItem = ({ 
   image, 
@@ -114,25 +118,64 @@ const Home = ({
   fileNames,
   handleFileNameChange,
   loading,
-  handleAddGeotag,
   geotagged,
   convertedImages,
   handleClear,
-  handleDownloadAll,
+  handleDownloadAll: originalHandleDownloadAll,
   handleClearAll,
   allConvertedAndGeotagged,
   fileFormats,
-  handleFormatChange
+  handleFormatChange,
+  handleAddGeotag: originalHandleAddGeotag
 }) => {
+  const { user } = useAuth();
+  const { credits, deductCredits, getOperationCost } = useCredits();
+  const navigate = useNavigate();
+  const [showCreditAlert, setShowCreditAlert] = useState(false);
+
+  const handleAddGeotagWithCredits = async (index) => {
+    const cost = getOperationCost('geotag');
+    
+    if (credits < cost) {
+      if (!user) {
+        setShowCreditAlert(true);
+        return;
+      } else {
+        alert('Insufficient credits. Please wait for credit renewal.');
+        return;
+      }
+    }
+
+    if (deductCredits(cost, 'geotag')) {
+      await originalHandleAddGeotag(index);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    const cost = getOperationCost('download');
+    
+    if (credits < cost) {
+      if (!user) {
+        setShowCreditAlert(true);
+        return;
+      } else {
+        alert('Insufficient credits. Please wait for credit renewal.');
+        return;
+      }
+    }
+
+    if (deductCredits(cost, 'download')) {
+      await originalHandleDownloadAll();
+    }
+  };
+
   return (
     <div className="home">
       <div className="container">
         <header className="home-header">
           <h1>Image Converter with EXIF Data Writer</h1>
           <p className="header-description">
-            Convert your images between WebP, PNG, and JPG formats while preserving EXIF data. 
-            Easily convert PNG to WebP for better web performance, JPG to PNG for quality, or WebP to JPG for wider compatibility. 
-            Add precise location data to your image metadata during conversion.
+            Convert your images between WebP, PNG, and JPG formats while preserving EXIF data. Add precise location data to your image metadata during conversion.
           </p>
         </header>
 
@@ -180,6 +223,14 @@ const Home = ({
             <section className="images-section">
               <div className="images-header">
                 <h2>Your Images</h2>
+                <div className="credits-info">
+                  <span>Credits: {credits}</span>
+                  {!user && (
+                    <button onClick={() => navigate('/dashboard')} className="login-for-credits">
+                      Login for more credits
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="images-grid">
@@ -190,7 +241,7 @@ const Home = ({
                     fileName={image.name}
                     onFileNameChange={(newName) => handleFileNameChange(index, newName)}
                     onFormatChange={(format) => handleFormatChange(index, format)}
-                    onAddGeotag={() => handleAddGeotag(index)}
+                    onAddGeotag={() => handleAddGeotagWithCredits(index)}
                     loading={loading[index]}
                     geotagged={geotagged[index]}
                     location={location}
@@ -309,6 +360,10 @@ const Home = ({
           </div>
         </footer>
       </div>
+      <CreditAlert 
+        isOpen={showCreditAlert}
+        onClose={() => setShowCreditAlert(false)}
+      />
     </div>
   );
 };

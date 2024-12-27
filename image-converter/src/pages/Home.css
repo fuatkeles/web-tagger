@@ -131,6 +131,39 @@
   margin: 0;
 }
 
+.credits-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.credits-info span {
+  background: var(--background-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.login-for-credits {
+  background: var(--button-primary);
+  color: var(--button-text);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-for-credits:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
 .download-all-btn {
   background: #06b6d4;
   color: white;
@@ -533,7 +566,7 @@ body.dark-mode .leaflet-control-geosearch .results {
 
 .home-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   padding: 2rem 0;
 }
 
@@ -541,15 +574,14 @@ body.dark-mode .leaflet-control-geosearch .results {
   font-size: 2.5rem;
   color: var(--text-primary);
   margin-bottom: 1rem;
-  font-weight: 700;
 }
 
 .header-description {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
   max-width: 800px;
   margin: 0 auto;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .features-section {
@@ -692,7 +724,7 @@ body.dark-mode .leaflet-control-geosearch .results {
   }
 
   .header-description {
-    font-size: 1.1rem;
+    font-size: 1rem;
     padding: 0 1rem;
   }
 
@@ -1039,5 +1071,77 @@ body.dark-mode .leaflet-control-geosearch .results {
 
   .step-flow p {
     max-width: 300px;
+  }
+}
+
+.credits-warning {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--background-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-color);
+  max-width: 300px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.credits-warning p {
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.btn-login-prompt {
+  background: var(--button-primary);
+  color: var(--button-text);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.btn-login-prompt:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .credits-warning {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .images-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .credits-info {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 } 
