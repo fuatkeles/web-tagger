@@ -168,9 +168,12 @@ const Home = ({
       <div className="container">
         <header className="home-header">
           <h1>Image Converter with EXIF Data Writer</h1>
-          <p className="header-description">
-            Convert your images between WebP, PNG, and JPG formats while preserving EXIF data. Add precise location data to your image metadata during conversion.
-          </p>
+          <div className="seo-benefits">
+            <p className="seo-text">
+              Boost your SEO rankings with proper EXIF metadata. Search engines use image metadata to better understand and rank your content. 
+              Adding location data, descriptions, and technical details helps your images appear in relevant searches.
+            </p>
+          </div>
         </header>
 
         <div className="credits-status">

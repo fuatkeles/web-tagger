@@ -600,14 +600,14 @@ body.dark-mode .leaflet-control-geosearch .results {
 
 .home-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   position: relative;
 }
 
 .home-header h1 {
   font-size: 2.5rem;
   color: var(--text-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .header-description {
@@ -1327,4 +1327,35 @@ body.dark-mode .leaflet-control-geosearch .results {
 .geotag-button:disabled {
   opacity: 0.8;
   cursor: not-allowed;
+}
+
+.seo-benefits {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(var(--button-primary-rgb), 0.1);
+  border-radius: 12px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(var(--button-primary-rgb), 0.2);
+  transition: transform 0.3s ease;
+}
+
+.seo-benefits:hover {
+  transform: translateY(-2px);
+}
+
+.seo-text {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .seo-benefits {
+    padding: 1rem;
+  }
 } 
