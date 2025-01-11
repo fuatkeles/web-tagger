@@ -32,12 +32,37 @@
 }
 
 .nav-left .logo {
-  display: block;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 12px;
+  text-decoration: none;
 }
 
-.nav-left .logo svg {
-  width: 140px;
+.nav-left .logo img {
+  width: 60px;
   height: auto;
+  object-fit: contain;
+}
+
+.nav-left .logo .site-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: linear-gradient(to right, var(--button-primary), var(--text-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: all 0.3s ease;
+}
+
+.nav-left .logo:hover .site-name {
+  background: linear-gradient(to right, var(--text-primary), var(--button-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  transform: translateY(-1px);
 }
 
 .logo svg path {
@@ -287,4 +312,34 @@ body.dark-mode .theme-toggle-thumb {
   border-color: var(--button-primary);
   color: var(--button-primary);
   background-color: var(--background-secondary);
+} 
+
+.pricing-link {
+  position: relative;
+  display: inline-block;
+}
+
+.pricing-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-links a {
+  position: relative;
+}
+
+.about-link {
+  position: relative;
+  display: inline-block;
+}
+
+.about-wrapper {
+  position: relative;
+  display: inline-block;
 } 

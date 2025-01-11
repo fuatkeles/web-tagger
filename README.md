@@ -1,4 +1,4 @@
-# Web Tagger Image Converter
+# Exif Quarter Image Converter
 
 A web application for converting images and adding geolocation data to them.
 

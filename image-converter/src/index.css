@@ -17,3 +17,29 @@ code {
 h1, h2, h3, h4, h5, h6, p, span, button, a {
   font-family: 'Poppins', sans-serif;
 }
+
+/* Leaflet GeoCoder Search Box Text Fix */
+body.dark-mode .leaflet-geosearch-bar form input,
+body.dark-mode .results > * {
+  color: #000000;
+}
+
+/* Remove borders and shadows from search results in both modes */
+.results {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .results {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove border from search input in both modes */
+.leaflet-geosearch-bar form input {
+  border: none !important;
+}
+
+.leaflet-geosearch-bar form {
+  border: none !important;
+}

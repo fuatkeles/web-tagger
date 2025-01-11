@@ -10,7 +10,7 @@ const About = () => {
           <div className="header-icon">
             <FaImages className="main-icon" />
           </div>
-          <h1>About Web Tagger - Image Converter & EXIF Writer</h1>
+          <h1>About Exif Quarter - Image Converter & EXIF Writer</h1>
           <p className="about-subtitle">
             Convert between popular image formats (PNG to WebP, JPG to PNG, WebP to JPG) while managing EXIF metadata
           </p>
@@ -21,9 +21,9 @@ const About = () => {
             <div className="section-icon">
               <FaImage />
             </div>
-            <h2>What is Web Tagger?</h2>
+            <h2>What is Exif Quarter?</h2>
             <p>
-              Web Tagger is an advanced image converter that lets you convert between WebP, PNG, and JPG formats. 
+              Exif Quarter is an advanced image converter that lets you convert between WebP, PNG, and JPG formats. 
               Whether you need to convert PNG to WebP for better web performance, JPG to PNG for quality, or WebP to JPG for compatibility, 
               our tool handles all conversions while preserving and allowing you to update image EXIF metadata.
             </p>

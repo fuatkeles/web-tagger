@@ -1,6 +1,6 @@
 {
-  "short_name": "Web Tagger",
-  "name": "Web Tagger - Image Converter & Geotag Writer",
+  "short_name": "Exif Quarter",
+  "name": "Exif Quarter - Image Converter & Geotag Writer",
   "icons": [
     {
       "src": "favicon.svg",
