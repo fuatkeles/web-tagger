@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ReactComponent as Logo } from '../assets/WebTagger.svg';
+import ExifQuarterLogo from '../assets/Exif Quarter logo.png';
 import { FaMoon, FaSun, FaGoogle, FaUser } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +32,8 @@ const Navbar = () => {
         <div className="nav-content">
           <div className="nav-left">
             <Link to="/" className="logo">
-              <Logo />
+              <img src={ExifQuarterLogo} alt="Exif Quarter Logo" />
+              <span className="site-name">EXIF QUARTER</span>
             </Link>
           </div>
           
@@ -50,7 +51,6 @@ const Navbar = () => {
                 </div>
               </div>
             </button>
-            
             {user ? (
               <div className="user-menu">
                 <Link to="/dashboard" className="user-profile">

@@ -11,6 +11,7 @@ const SearchControl = ({ setLocation }) => {
 
   useEffect(() => {
     const provider = new OpenStreetMapProvider();
+    let currentMarker = null;
 
     const customIcon = L.divIcon({
       className: 'custom-icon',
@@ -27,21 +28,29 @@ const SearchControl = ({ setLocation }) => {
     const searchControl = new GeoSearchControl({
       provider,
       style: 'bar',
-      showMarker: true,
+      showMarker: false, // Disable default marker
       showPopup: false,
       autoClose: true,
       retainZoomLevel: false,
       animateZoom: true,
-      keepResult: true,
-      marker: {
-        icon: customIcon
-      }
+      keepResult: true
     });
 
     map.addControl(searchControl);
 
+    // Handle search result
     map.on('geosearch/showlocation', (result) => {
       if (result && result.location) {
+        // Remove previous marker if exists
+        if (currentMarker) {
+          map.removeLayer(currentMarker);
+        }
+        
+        // Add new marker
+        currentMarker = L.marker([result.location.y, result.location.x], {
+          icon: customIcon
+        }).addTo(map);
+
         setLocation({
           lat: result.location.y,
           lng: result.location.x
@@ -49,7 +58,20 @@ const SearchControl = ({ setLocation }) => {
       }
     });
 
-    return () => map.removeControl(searchControl);
+    // Handle map click to remove search marker
+    map.on('click', () => {
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+      }
+    });
+
+    return () => {
+      map.removeControl(searchControl);
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+    };
   }, [map, setLocation]);
 
   return null;

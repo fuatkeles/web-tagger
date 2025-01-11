@@ -18,6 +18,9 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
 
   return (
     <div className={`pricing-card ${popular ? 'popular' : ''} ${lifetime ? 'lifetime' : ''}`}>
+      <div className="coming-soon-overlay">
+        <span>Coming Soon</span>
+      </div>
       {popular && <div className="popular-badge">Most Popular</div>}
       {lifetime && <div className="lifetime-badge">Best Value</div>}
       <h3 className="plan-name">{plan}</h3>
@@ -44,8 +47,8 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
           </li>
         ))}
       </ul>
-      <button className="select-plan-btn" onClick={handleClick}>
-        {user ? 'Select Plan' : 'Login to Get Started'}
+      <button className="select-plan-btn" onClick={handleClick} disabled>
+        Coming Soon
       </button>
     </div>
   );
@@ -79,9 +82,19 @@ const Pricing = () => {
 
   return (
     <div className="pricing-page">
+      <div className="pricing-page-overlay">
+        <div className="coming-soon-text">
+          <span>Coming Soon</span>
+        </div>
+      </div>
+      
       <div className="pricing-hero">
         <h1>Choose the Perfect Plan</h1>
         <p>Transform your images with powerful conversion and geotagging features</p>
+        <div className="launch-announcement">
+          <h2>🚀 Special Launch Offer!</h2>
+          <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
+        </div>
       </div>
 
       <div className="pricing-section">
@@ -101,10 +114,13 @@ const Pricing = () => {
       </div>
 
       <div className="api-tiers">
-        <h2>API Access Tiers</h2>
+        <h2>API Access Tiers <span className="coming-soon-text">(Coming Soon)</span></h2>
         <div className="api-tiers-grid">
           {apiTiers.map((tier, index) => (
             <div key={index} className="api-tier">
+              <div className="coming-soon-overlay">
+                <span>Coming Soon</span>
+              </div>
               <h3>{tier.title}</h3>
               <p>{tier.description}</p>
               <ul>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
-import { FaUpload, FaTimes, FaCheckCircle, FaImage, FaMapMarkerAlt, FaCoins, FaGoogle } from 'react-icons/fa';
+import { FaUpload, FaTimes, FaCheckCircle, FaImage, FaMapMarkerAlt, FaCoins, FaGoogle, FaRocket } from 'react-icons/fa';
 import LocationMarker from '../components/LocationMarker';
 import SearchControl from '../components/SearchControl';
 import './Home.css';
@@ -361,7 +361,7 @@ const Home = ({
         <footer className="site-footer">
           <div className="footer-content">
             <div className="footer-info">
-              <p>© 2024 Web Tagger - Image Converter & EXIF Writer</p>
+              <p>© 2024 Exif Quarter - Image Converter & EXIF Writer</p>
               <p>Convert between WebP, PNG, and JPG formats while preserving and updating image metadata.</p>
             </div>
             <div className="footer-links">
