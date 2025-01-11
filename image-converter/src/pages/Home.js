@@ -122,7 +122,8 @@ const Home = ({
   handleFormatChange,
   handleAddGeotag: originalHandleAddGeotag
 }) => {
-  const { user, signInWithGoogle } = useAuth();
+  const { user, signInWithGoogle, isPromotionActive } = useAuth();
+  console.log('Debug - isPromotionActive:', isPromotionActive, 'user:', user);
   const { credits, deductCredits, getOperationCost } = useCredits();
   const navigate = useNavigate();
   const [showCreditAlert, setShowCreditAlert] = useState(false);
@@ -175,6 +176,21 @@ const Home = ({
             </p>
           </div>
         </header>
+
+        {!user && isPromotionActive && (
+          <div className="credits-status left">
+            <div className="credits-count">
+              <FaRocket className="rocket-icon" />
+              <span className="promo-count">EARN 4X!</span>
+            </div>
+            <div className="credits-extra">
+              <span className="promotion-text">First 100 users get 200 credits! 🎉</span>
+              <button onClick={signInWithGoogle} className="credits-login">
+                <FaGoogle /> Join Now
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="credits-status">
           <div className="credits-count">
