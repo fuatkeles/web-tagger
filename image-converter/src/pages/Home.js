@@ -123,7 +123,6 @@ const Home = ({
   handleAddGeotag: originalHandleAddGeotag
 }) => {
   const { user, signInWithGoogle, isPromotionActive } = useAuth();
-  console.log('Debug - isPromotionActive:', isPromotionActive, 'user:', user);
   const { credits, deductCredits, getOperationCost } = useCredits();
   const navigate = useNavigate();
   const [showCreditAlert, setShowCreditAlert] = useState(false);

@@ -1,7 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut 
+} from 'firebase/auth';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  writeBatch,
+  getFirestore,
+  onSnapshot,
+  runTransaction,
+  increment 
+} from 'firebase/firestore';
 import { auth, googleProvider, db } from '../firebase/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged } from '@firebase/auth';
-import { doc, setDoc, getDoc, increment, runTransaction, onSnapshot } from '@firebase/firestore';
+import { onAuthStateChanged } from '@firebase/auth';
 
 const AuthContext = createContext();
 
@@ -19,7 +34,6 @@ export const AuthProvider = ({ children }) => {
         const promotionDoc = await getDoc(promotionRef);
         
         if (!promotionDoc.exists()) {
-          // Initialize promotion document if it doesn't exist
           await setDoc(promotionRef, {
             userCount: 0,
             isActive: true,
@@ -31,25 +45,20 @@ export const AuthProvider = ({ children }) => {
           setIsPromotionActive(isActive && userCount < maxUsers);
         }
       } catch (error) {
-        console.error("Error checking promotion:", error);
-        // Hata durumunda varsayılan olarak true yapıyoruz
         setIsPromotionActive(true);
       }
     };
 
     checkPromotion();
 
-    // Real-time listener for promotion changes
     const unsubscribe = onSnapshot(doc(db, 'promotion', 'firstUsers'), (doc) => {
       if (doc.exists()) {
         const { userCount, isActive, maxUsers } = doc.data();
-        console.log('Promotion status:', { userCount, isActive, maxUsers });
         setIsPromotionActive(isActive && userCount < maxUsers);
       } else {
         setIsPromotionActive(true);
       }
     }, (error) => {
-      console.error("Error in promotion listener:", error);
       setIsPromotionActive(true);
     });
 
@@ -77,7 +86,6 @@ export const AuthProvider = ({ children }) => {
                 const isEligible = isActive && userCount < maxUsers;
                 const startingCredits = isEligible ? 200 : 50;
 
-                // Increment user count if promotion is active
                 if (isEligible) {
                   transaction.update(promotionRef, {
                     userCount: increment(1),
@@ -85,7 +93,6 @@ export const AuthProvider = ({ children }) => {
                   });
                 }
 
-                // Create new user document
                 transaction.set(userRef, {
                   uid: user.uid,
                   email: user.email,
@@ -100,8 +107,6 @@ export const AuthProvider = ({ children }) => {
                 });
               });
             } catch (error) {
-              console.error("Error in promotion transaction:", error);
-              // Fallback to regular credits if transaction fails
               await setDoc(userRef, {
                 uid: user.uid,
                 email: user.email,
@@ -117,7 +122,7 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } catch (error) {
-          console.error("Error checking user document:", error);
+          // Handle error silently
         }
       }
       setUser(user);
@@ -133,14 +138,14 @@ export const AuthProvider = ({ children }) => {
       try {
         await signInWithPopup(auth, googleProvider);
       } catch (error) {
-        console.error("Error signing in with Google:", error);
+        // Handle error silently
       }
     },
     signOut: async () => {
       try {
         await signOut(auth);
       } catch (error) {
-        console.error("Error signing out:", error);
+        // Handle error silently
       }
     },
     isPromotionActive
