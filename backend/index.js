@@ -5,16 +5,75 @@ const cors = require('cors');
 const exiftool = require('exiftool-vendored').exiftool;
 const path = require('path');
 const fs = require('fs').promises;
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
 
+// Security Middleware
+app.use(helmet());
+app.use(xss());
+app.use(hpp());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// File upload configuration
 const upload = multer({
-  storage: multer.memoryStorage()
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only specific image types
+    if (!file.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
+      return cb(new Error('Only JPG, PNG & WebP files are allowed!'), false);
+    }
+    cb(null, true);
+  }
 });
 
-app.post('/add-geotag', upload.single('image'), async (req, res) => {
+// Input validation middleware
+const validateImageInput = [
+  body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
+  body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
+  body('format').optional().isIn(['webp', 'png', 'jpg']).withMessage('Invalid format'),
+  body('newFileName').optional().trim().escape()
+];
+
+// Error handling middleware
+const errorHandler = (err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+  });
+};
+
+app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, res) => {
   try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { latitude, longitude, newFileName, format = 'webp' } = req.body;
     console.log('Received data:', { latitude, longitude, newFileName, format, file: req.file ? 'exists' : 'missing' });
 
@@ -22,10 +81,11 @@ app.post('/add-geotag', upload.single('image'), async (req, res) => {
       throw new Error('No image file received');
     }
 
-    // Geçici dosya oluştur
-    const tempFilePath = path.join(__dirname, `temp-${Date.now()}.${format}`);
+    // Generate safe filename
+    const safeFileName = path.basename(newFileName || 'image').replace(/[^a-z0-9]/gi, '_');
+    const tempFilePath = path.join(__dirname, `temp-${Date.now()}-${safeFileName}.${format}`);
     
-    // Resmi istenilen formata çevir ve kaydet
+    // Process image
     let imageBuffer;
     switch (format.toLowerCase()) {
       case 'png':
@@ -40,7 +100,7 @@ app.post('/add-geotag', upload.single('image'), async (req, res) => {
     await fs.writeFile(tempFilePath, imageBuffer);
 
     try {
-      // Geotag ekle
+      // Add geotag
       await exiftool.write(tempFilePath, {
         GPSLatitude: parseFloat(latitude),
         GPSLongitude: parseFloat(longitude),
@@ -48,23 +108,28 @@ app.post('/add-geotag', upload.single('image'), async (req, res) => {
         GPSLongitudeRef: parseFloat(longitude) >= 0 ? 'E' : 'W'
       }, ['-overwrite_original']);
 
-      // İşlenmiş dosyayı oku
       const finalBuffer = await fs.readFile(tempFilePath);
 
-      // MIME tiplerini ayarla
       const mimeTypes = {
         'png': 'image/png',
         'jpg': 'image/jpeg',
         'webp': 'image/webp'
       };
 
-      // Dosyayı gönder
-      res.set('Content-Type', mimeTypes[format.toLowerCase()] || 'image/webp');
-      res.set('Content-Disposition', `attachment; filename="${newFileName || 'image'}.${format}"`);
+      // Set secure headers
+      res.set({
+        'Content-Type': mimeTypes[format.toLowerCase()] || 'image/webp',
+        'Content-Disposition': `attachment; filename="${safeFileName}.${format}"`,
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
       res.send(finalBuffer);
 
     } finally {
-      // Geçici dosyayı temizle
+      // Clean up temp file
       try {
         await fs.unlink(tempFilePath);
       } catch (err) {
@@ -74,20 +139,34 @@ app.post('/add-geotag', upload.single('image'), async (req, res) => {
 
   } catch (error) {
     console.error('Detailed error:', error);
-    res.status(500).json({ error: error.message });
+    next(error);
   }
 });
 
-app.post('/convert', upload.single('image'), async (req, res) => {
+app.post('/convert', upload.single('image'), async (req, res, next) => {
   try {
+    if (!req.file) {
+      throw new Error('No image file received');
+    }
+
     const webpBuffer = await sharp(req.file.buffer).webp().toBuffer();
-    res.set('Content-Type', 'image/webp');
+    
+    res.set({
+      'Content-Type': 'image/webp',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.send(webpBuffer);
   } catch (error) {
-    console.error('Error converting image:', error);
-    res.status(500).send('Error converting image');
+    next(error);
   }
 });
+
+// Apply error handling middleware
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
