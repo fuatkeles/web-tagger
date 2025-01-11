@@ -29,16 +29,20 @@
   text-align: center;
   padding: 4rem 5rem;
   animation: pulse 2s infinite;
-  background: white;
+  background: var(--background-secondary);
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
-.pricing-page-overlay .coming-soon-text span {
-  background: linear-gradient(135deg, var(--button-primary), var(--text-primary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.pricing-page-overlay .coming-soon-text::after {
+  content: '🚀';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  font-size: 2rem;
+  background: none;
+  -webkit-text-fill-color: initial;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .pricing-page-overlay .coming-soon-text::before {
@@ -56,16 +60,28 @@
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+  opacity: 0.8;
 }
 
-.pricing-page-overlay .coming-soon-text::after {
-  content: '🚀';
-  position: absolute;
-  top: -20px;
-  right: -20px;
-  font-size: 2rem;
-  background: none;
-  -webkit-text-fill-color: initial;
+.pricing-page-overlay .coming-soon-text span {
+  background: linear-gradient(135deg, var(--button-primary), var(--text-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+body.dark-mode .pricing-page-overlay .coming-soon-text {
+  background: var(--background-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .pricing-page-overlay .coming-soon-text::before {
+  opacity: 1;
+}
+
+body.dark-mode .pricing-page-overlay .coming-soon-text span {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 @keyframes pulse {

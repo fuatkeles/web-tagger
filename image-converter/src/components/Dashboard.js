@@ -93,19 +93,28 @@ const Dashboard = () => {
       </div>
 
       <div className="dashboard-content">
-        <div className="pricing-section">
-          <h2>Pricing Plans <span className="coming-soon-text">(Coming Soon)</span></h2>
-          <div className="launch-announcement">
-            <h3>🚀 Special Launch Offer!</h3>
-            <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
+        <div className="pricing-sections-container">
+          <div className="pricing-overlay">
+            <div className="coming-soon-text">
+              <span>Coming Soon</span>
+            </div>
           </div>
-          <div className="pricing-grid">
-            {pricingPlans.map((plan, index) => (
-              <PricingCard key={index} {...plan} />
-            ))}
+          <div className="pricing-section">
+            <h2>Pricing Plans <span className="coming-soon-text">(Coming Soon)</span></h2>
+            <div className="launch-announcement">
+              <h3>🚀 Special Launch Offer!</h3>
+              <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
+            </div>
+            <div className="pricing-grid">
+              {pricingPlans.map((plan, index) => (
+                <PricingCard key={index} {...plan} />
+              ))}
+            </div>
+          </div>
+          <div className="pricing-section">
+            <PayAsYouGo />
           </div>
         </div>
-        <PayAsYouGo />
       </div>
     </div>
   );

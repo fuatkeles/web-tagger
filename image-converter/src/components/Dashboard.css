@@ -306,12 +306,23 @@
   color: #ffd700;
 }
 
+.pricing-sections-container {
+  width: 100vw;
+  position: relative;
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .pricing-section {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 2rem auto;
+  margin: 0 auto;
 }
 
 .pricing-section h2 {
@@ -320,6 +331,98 @@
   margin-bottom: 2rem;
   margin-top: 0;
   font-size: 2rem;
+}
+
+.pricing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  background: rgba(var(--background-base-rgb), 0.85);
+  backdrop-filter: blur(35px);
+  -webkit-backdrop-filter: blur(35px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pricing-overlay .coming-soon-text {
+  font-size: 3.5rem;
+  font-weight: 900;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-align: center;
+  padding: 4rem 5rem;
+  animation: pulse 2s infinite;
+  background: var(--background-secondary);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.pricing-overlay .coming-soon-text::after {
+  content: '🚀';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  font-size: 2rem;
+  background: none;
+  -webkit-text-fill-color: initial;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.pricing-overlay .coming-soon-text::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--button-primary), var(--text-primary));
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+}
+
+.pricing-overlay .coming-soon-text span {
+  background: linear-gradient(135deg, var(--button-primary), var(--text-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+body.dark-mode .pricing-overlay .coming-soon-text {
+  background: var(--background-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .pricing-overlay .coming-soon-text::before {
+  opacity: 1;
+}
+
+body.dark-mode .pricing-overlay .coming-soon-text span {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .pricing-grid {
