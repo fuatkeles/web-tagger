@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ExifQuarterLogo from '../assets/Exif Quarter logo.png';
 import { FaMoon, FaSun, FaGoogle, FaUser } from 'react-icons/fa';
 import { useTheme } from '../context/ThemeContext';
@@ -7,8 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const { isDarkMode, setIsDarkMode } = useTheme();
-  const { user, signInWithGoogle, logout } = useAuth();
+  const { user, signInWithGoogle, signOut } = useAuth();
 
   const handleGoogleLogin = async () => {
     try {
@@ -20,7 +21,8 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await signOut();
+      navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
