@@ -386,4 +386,57 @@
   .steps-container {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+@media (max-width: 1200px) {
+  .about-content {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 768px) {
+  .about-content {
+    max-width: 95%;
+    padding: 1rem;
+  }
+
+  .about-header h1 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .about-subtitle {
+    text-align: center;
+  }
+
+  .section-content {
+    padding: 1.5rem;
+  }
+
+  .benefits-list {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .step {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .section-content {
+    padding: 1rem;
+  }
+
+  .about-section h2 {
+    font-size: 1.5rem;
+  }
 } 

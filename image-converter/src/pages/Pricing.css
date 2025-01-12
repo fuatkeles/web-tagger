@@ -137,6 +137,7 @@ body.dark-mode .pricing-page-overlay .coming-soon-text span {
   width: 100%;
   margin: 0 auto;
   align-items: stretch;
+  flex-wrap: wrap;
 }
 
 .features-grid {
@@ -263,55 +264,162 @@ body.dark-mode .pricing-page-overlay .coming-soon-text span {
 
 @media (max-width: 1400px) {
   .pricing-page {
-    width: 75%;
+    width: 85%;
+    padding: 0 1rem;
   }
   
   .pricing-grid {
-    gap: 30px;
-  }
-  
-  .pricing-card {
-    flex: 0 0 230px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 1024px) {
   .pricing-page {
-    width: 85%;
+    width: 90%;
+    padding: 0 1rem;
   }
   
   .pricing-grid {
-    flex-wrap: wrap;
-    gap: 30px;
+    gap: 20px;
+    justify-content: center;
   }
   
   .pricing-card {
-    flex: 0 0 250px;
+    flex: 0 0 300px;
+    margin: 20px 10px;
+  }
+
+  .features-grid {
+    padding: 0 1rem;
   }
 }
 
 @media (max-width: 768px) {
   .pricing-page {
-    width: 90%;
+    width: 95%;
+    padding: 0 0.5rem;
+    overflow-x: hidden;
+  }
+  
+  .pricing-hero {
+    padding: 120px 1rem 0;
+  }
+
+  .pricing-hero h1 {
+    font-size: 2rem;
   }
   
   .pricing-grid {
     flex-direction: column;
     align-items: center;
     gap: 30px;
+    padding: 0;
   }
   
   .pricing-card {
-    width: 280px;
+    flex: 0 0 auto;
+    width: 90%;
+    max-width: 320px;
+    margin: 20px auto;
+    transform: none !important;
   }
 
-  .features-grid {
+  .pricing-card.popular,
+  .pricing-card.lifetime {
+    transform: none !important;
+  }
+  
+  .pricing-card:hover,
+  .pricing-card.popular:hover,
+  .pricing-card.lifetime:hover {
+    transform: translateY(-5px) !important;
+  }
+
+  .popular-badge,
+  .lifetime-badge {
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 140px;
+    padding: 6px 20px;
+  }
+
+  .features-grid,
+  .api-tiers-grid,
+  .faq-grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
     padding: 0 1rem;
   }
   
-  .feature-section {
+  .feature-section,
+  .api-tier,
+  .faq-item {
+    padding: 1.5rem;
+  }
+
+  .launch-announcement {
+    margin: 1.5rem 1rem;
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pricing-page {
+    width: 100%;
+    padding: 0;
+  }
+
+  .pricing-hero {
+    padding: 100px 1rem 0;
+  }
+
+  .pricing-hero h1 {
+    font-size: 1.75rem;
+  }
+
+  .pricing-hero p {
+    font-size: 1rem;
+  }
+
+  .pricing-card {
+    width: calc(100% - 2rem);
+    margin: 20px 1rem;
+    padding: 1.5rem;
+  }
+
+  .popular-badge,
+  .lifetime-badge {
+    font-size: 0.8rem;
+    padding: 5px 15px;
+    min-width: 120px;
+  }
+
+  .pricing-card .features-list {
+    margin: 1rem 0;
+  }
+
+  .pricing-card .select-plan-btn {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+
+  .launch-announcement h2 {
+    font-size: 1.25rem;
+  }
+
+  .launch-announcement p {
+    font-size: 1.1rem;
+  }
+
+  .launch-announcement {
+    margin: 1rem 0.5rem;
+    padding: 1rem;
+  }
+
+  .pricing-page-overlay .coming-soon-text {
+    font-size: 2rem;
     padding: 2rem;
   }
 }
@@ -327,6 +435,8 @@ body.dark-mode .pricing-page-overlay .coming-soon-text span {
   position: relative;
   min-height: 420px;
   margin-top: 20px;
+  max-width: 300px;
+  width: 100%;
 }
 
 .pricing-card.popular {
@@ -606,6 +716,77 @@ body.dark-mode .pricing-card.lifetime .credits-info {
 
   .launch-announcement p {
     font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .pricing-container {
+    padding: 0 1rem;
+  }
+
+  .pricing-grid {
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .pricing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .api-tiers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .faq-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pricing-hero h1 {
+    font-size: 2rem;
+  }
+
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .api-tiers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .pricing-hero h1 {
+    font-size: 1.75rem;
+  }
+
+  .pricing-hero p {
+    font-size: 1rem;
+  }
+
+  .launch-announcement h2 {
+    font-size: 1.25rem;
   }
 }
 
