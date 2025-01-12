@@ -20,15 +20,59 @@ const ImageListItem = ({
   location,
   onRemove,
   selectedFormat,
-  convertedUrl
+  convertedUrl,
+  onDownload
 }) => {
-  const [name, setName] = React.useState(fileName.split('.')[0]);
+  const [name, setName] = React.useState(fileName.split('.')[0].replace(/\.[^/.]+$/, ''));
+  const { deductCredits } = useCredits();
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isConverted, setIsConverted] = useState(false);
 
-  const handleNameChange = (e) => {
+  const handleNameChange = async (e) => {
     const newName = e.target.value;
     setName(newName);
-    onFileNameChange(`${newName}.${selectedFormat || 'webp'}`);
+    
+    // If user is actively typing, don't charge credits
+    if (!isRenaming) {
+      setIsRenaming(true);
+      return;
+    }
+    
+    // When user stops typing for 1 second, charge credits
+    clearTimeout(window.renameTimeout);
+    window.renameTimeout = setTimeout(async () => {
+      if (newName !== fileName.split('.')[0]) {
+        if (await deductCredits(1, 'rename')) {
+          const cleanName = newName.replace(/\.[^/.]+$/, '');
+          onFileNameChange(`${cleanName}.${selectedFormat}`);
+          setIsConverted(true);
+        }
+      }
+      setIsRenaming(false);
+    }, 1000);
   };
+
+  const handleFormatChange = async (newFormat) => {
+    if (await deductCredits(1, 'format')) {
+      onFormatChange(newFormat);
+      const cleanName = name.replace(/\.[^/.]+$/, '');
+      onFileNameChange(`${cleanName}.${newFormat}`);
+      setIsConverted(true);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (isConverted || geotagged) {
+      onDownload();
+    }
+  };
+
+  // Update isConverted when geotagged changes
+  useEffect(() => {
+    if (geotagged) {
+      setIsConverted(true);
+    }
+  }, [geotagged]);
 
   return (
     <div className="image-list-item">
@@ -47,11 +91,8 @@ const ImageListItem = ({
           />
           <select 
             className="format-select"
-            onChange={(e) => {
-              onFormatChange(e.target.value);
-              onFileNameChange(`${name}.${e.target.value}`);
-            }}
-            value={selectedFormat || 'webp'}
+            onChange={(e) => handleFormatChange(e.target.value)}
+            value={selectedFormat}
           >
             <option value="webp">webp</option>
             <option value="png">png</option>
@@ -80,15 +121,14 @@ const ImageListItem = ({
             </button>
           )}
 
-          {geotagged && convertedUrl && (
-            <a 
-              href={convertedUrl}
-              download={`${name.replace(/\s+/g, '-')}.${selectedFormat}`}
+          {(isConverted || geotagged) && (
+            <button 
+              onClick={handleDownload}
               className="download-button"
             >
               <FaCheckCircle />
               Download
-            </a>
+            </button>
           )}
 
           <button className="remove-button" onClick={onRemove}>
@@ -120,7 +160,8 @@ const Home = ({
   allConvertedAndGeotagged,
   fileFormats,
   handleFormatChange,
-  handleAddGeotag: originalHandleAddGeotag
+  handleAddGeotag: originalHandleAddGeotag,
+  handleDownload
 }) => {
   const { user, signInWithGoogle, isPromotionActive } = useAuth();
   const { credits, deductCredits, getOperationCost } = useCredits();
@@ -140,15 +181,20 @@ const Home = ({
       }
     }
 
-    if (deductCredits(cost, 'geotag')) {
+    if (await deductCredits(cost, 'geotag')) {
       await originalHandleAddGeotag(index);
     }
   };
 
+  const handleDownloadWithCredits = async (index) => {
+    // Single file download is free
+    await handleDownload(index);
+  };
+
   const handleDownloadAll = async () => {
-    const cost = getOperationCost('download');
+    const cost = getOperationCost('download_all', images.length);
     
-    if (credits < cost) {
+    if (cost > 0 && credits < cost) {
       if (!user) {
         setShowCreditAlert(true);
         return;
@@ -158,7 +204,7 @@ const Home = ({
       }
     }
 
-    if (deductCredits(cost, 'download')) {
+    if (cost === 0 || await deductCredits(cost, 'download_all')) {
       await originalHandleDownloadAll();
     }
   };
@@ -275,14 +321,18 @@ const Home = ({
                     onRemove={() => handleClear(index)}
                     selectedFormat={fileFormats[index]}
                     convertedUrl={convertedImages[index]?.url}
+                    onDownload={() => handleDownloadWithCredits(index)}
                   />
                 ))}
               </div>
             </section>
 
             <div className="action-buttons-container">
-              {allConvertedAndGeotagged && (
-                <button className="download-all-btn" onClick={handleDownloadAll}>
+              {images.length > 0 && Object.values(convertedImages).some(img => img?.url) && (
+                <button 
+                  className="download-all-btn" 
+                  onClick={handleDownloadAll}
+                >
                   Download All
                 </button>
               )}
