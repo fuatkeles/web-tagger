@@ -76,28 +76,7 @@ export const CreditsProvider = ({ children }) => {
     };
 
     initializeUserCredits();
-
-    // Add interval to check credits for non-logged users
-    if (!user) {
-      const interval = setInterval(async () => {
-        try {
-          // Only update if there's no ongoing operation
-          if (!lastOperation || Date.now() - lastOperation > 5000) {
-            const response = await axios.get(`${API_URL}/api/credits/anonymous`);
-            // Only update if the credits are different
-            if (response.data.credits !== credits) {
-              setCredits(response.data.credits);
-              setOperations(response.data.operations);
-            }
-          }
-        } catch (error) {
-          // Ignore error
-        }
-      }, 10000); // Check every 10 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [user, credits]);
+  }, [user]);
 
   const deductCredits = async (amount, operationType) => {
     if (credits < amount) return false;
@@ -134,7 +113,6 @@ export const CreditsProvider = ({ children }) => {
         
         setCredits(response.data.credits);
         setOperations(response.data.operations);
-        lastOperation = Date.now(); // Mark the time of last operation
       }
       return true;
     } catch (error) {

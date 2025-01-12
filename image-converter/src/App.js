@@ -366,6 +366,13 @@ function App() {
 
       try {
         let blob;
+        const format = fileFormats[index] || 'webp';
+        const cleanFileName = fileNames[index]
+          .replace(/\.(png|jpe?g|webp)$/i, '')
+          .replace(/\.[^/.]+$/, '')
+          .replace(/\s+/g, '-');
+        const fileName = `${cleanFileName}.${format}`;
+
         if (hasBeenConverted || hasBeenGeotagged) {
           // Use the converted/geotagged version if available
           const response = await fetch(convertedImages[index].url);
@@ -373,15 +380,8 @@ function App() {
             continue;
           }
           blob = await response.blob();
-        } else {
+        } else if (hasModifiedFormat || hasModifiedName) {
           // Convert the image with new format/name
-          const format = fileFormats[index] || 'webp';
-          const cleanFileName = fileNames[index]
-            .replace(/\.(png|jpe?g|webp)$/i, '')
-            .replace(/\.[^/.]+$/, '')
-            .replace(/\s+/g, '-');
-          const fileName = `${cleanFileName}.${format}`;
-
           const formData = new FormData();
           formData.append('image', images[index]);
           formData.append('format', format);
@@ -394,14 +394,25 @@ function App() {
             },
           });
           blob = new Blob([response.data], { type: `image/${format}` });
+
+          // Store the converted version
+          const url = URL.createObjectURL(blob);
+          const newConvertedImages = { ...convertedImages };
+          newConvertedImages[index] = {
+            url: url,
+            format: format,
+            modified: true
+          };
+          setConvertedImages(newConvertedImages);
         }
 
-        // Add to zip
-        const baseFileName = fileNames[index].split('.')[0].replace(/\s+/g, '-');
-        const format = fileFormats[index] || 'webp';
-        folder.file(`${baseFileName}.${format}`, blob);
-        processedCount++;
+        if (blob) {
+          // Add to zip
+          folder.file(fileName, blob);
+          processedCount++;
+        }
       } catch (error) {
+        console.warn(`Error processing image at index ${index}:`, error);
       }
     }
 
