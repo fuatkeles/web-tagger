@@ -96,8 +96,18 @@ function App() {
     setMenuActive(!menuActive);
   };
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
+    
+    // Check file sizes
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      alert(`Following files are too large (max 10MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
+      return;
+    }
+
     setImages(files);
     setFileNames(files.map(file => file.name.split('.')[0]));
     setFileFormats(new Array(files.length).fill('webp'));
@@ -139,6 +149,14 @@ function App() {
   const handleDrop = (e) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
+    
+    // Check file sizes
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      alert(`Following files are too large (max 10MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
+      return;
+    }
+
     setImages(files);
     setFileNames(files.map(file => file.name.replace(/\.[^/.]+$/, "")));
     setIsDragActive(false);
@@ -166,6 +184,12 @@ function App() {
       return;
     }
 
+    // Check file size before processing
+    if (images[index].size > MAX_FILE_SIZE) {
+      alert('File is too large to process (max 10MB). Please try with a smaller file.');
+      return;
+    }
+
     setLoading(prev => ({ ...prev, [index]: true }));
     
     try {
@@ -189,6 +213,11 @@ function App() {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
+      }).catch(error => {
+        if (error.response && error.response.status === 413) {
+          throw new Error('File is too large to process. Please try with a smaller file.');
+        }
+        throw error;
       });
 
       // Create a blob with the correct type
@@ -210,18 +239,7 @@ function App() {
       setConvertedImages(newConvertedImages);
       setGeotagged(prev => ({ ...prev, [index]: true }));
     } catch (error) {
-      if (error.response) {
-        // Read the blob data to see the actual error message
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const errorData = JSON.parse(reader.result);
-          } catch (e) {
-          }
-        };
-        reader.readAsText(error.response.data);
-      }
-      alert('Error adding geotag. Please try again.');
+      alert(error.message || 'Error adding geotag. Please try again.');
     } finally {
       setLoading(prev => ({ ...prev, [index]: false }));
     }
@@ -259,6 +277,12 @@ function App() {
 
   const handleDownload = async (index) => {
     try {
+      // Check file size before processing
+      if (images[index].size > MAX_FILE_SIZE) {
+        alert('File is too large to process (max 10MB). Please try with a smaller file.');
+        return;
+      }
+
       const image = images[index];
       const format = fileFormats[index] || 'webp';
       const cleanFileName = fileNames[index]
@@ -293,6 +317,11 @@ function App() {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      }).catch(error => {
+        if (error.response && error.response.status === 413) {
+          throw new Error('File is too large to process. Please try with a smaller file.');
+        }
+        throw error;
       });
 
       const blob = new Blob([response.data], { type: `image/${format}` });

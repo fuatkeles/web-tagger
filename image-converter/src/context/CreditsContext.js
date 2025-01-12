@@ -13,6 +13,7 @@ export const useCredits = () => useContext(CreditsContext);
 
 const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
+let lastOperation = null;
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
@@ -80,16 +81,23 @@ export const CreditsProvider = ({ children }) => {
     if (!user) {
       const interval = setInterval(async () => {
         try {
-          const response = await axios.get(`${API_URL}/api/credits/anonymous`);
-          setCredits(response.data.credits);
-          setOperations(response.data.operations);
+          // Only update if there's no ongoing operation
+          if (!lastOperation || Date.now() - lastOperation > 5000) {
+            const response = await axios.get(`${API_URL}/api/credits/anonymous`);
+            // Only update if the credits are different
+            if (response.data.credits !== credits) {
+              setCredits(response.data.credits);
+              setOperations(response.data.operations);
+            }
+          }
         } catch (error) {
+          // Ignore error
         }
       }, 10000); // Check every 10 seconds
 
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, credits]);
 
   const deductCredits = async (amount, operationType) => {
     if (credits < amount) return false;
@@ -126,6 +134,7 @@ export const CreditsProvider = ({ children }) => {
         
         setCredits(response.data.credits);
         setOperations(response.data.operations);
+        lastOperation = Date.now(); // Mark the time of last operation
       }
       return true;
     } catch (error) {
