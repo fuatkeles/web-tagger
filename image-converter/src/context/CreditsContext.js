@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '../firebase/firebase';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from '@firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from '@firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
 const CreditsContext = createContext();
 
@@ -10,33 +13,6 @@ export const useCredits = () => useContext(CreditsContext);
 
 const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
-
-const getDailyResetTime = () => {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setHours(24, 0, 0, 0);
-  return tomorrow.getTime();
-};
-
-// Force reset credits if they are still at old value
-const currentFreeCredits = parseInt(localStorage.getItem('freeCredits'));
-if (currentFreeCredits === 5) {
-  localStorage.setItem('freeCredits', FREE_CREDITS.toString());
-  localStorage.setItem('lastResetTime', getDailyResetTime().toString());
-}
-
-const checkAndResetDailyCredits = () => {
-  const lastResetTime = localStorage.getItem('lastResetTime');
-  const now = new Date().getTime();
-  
-  if (!lastResetTime || now >= parseInt(lastResetTime)) {
-    localStorage.setItem('freeCredits', FREE_CREDITS.toString());
-    localStorage.setItem('lastResetTime', getDailyResetTime().toString());
-    return FREE_CREDITS;
-  }
-  
-  return parseInt(localStorage.getItem('freeCredits')) || FREE_CREDITS;
-};
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
@@ -78,24 +54,19 @@ export const CreditsProvider = ({ children }) => {
             setMembershipType(userData.membershipType || 'free');
           }
         } else {
-          // Not logged in, use local storage for free credits with daily reset
-          const currentCredits = checkAndResetDailyCredits();
-          setCredits(currentCredits);
-
-          const storedOperations = localStorage.getItem('freeOperations');
-          if (storedOperations) {
-            setOperations(JSON.parse(storedOperations));
-          } else {
-            localStorage.setItem('freeOperations', JSON.stringify([]));
+          // Not logged in, get credits from backend API
+          try {
+            const response = await axios.get(`${API_URL}/api/credits/anonymous`);
+            setCredits(response.data.credits);
+            setOperations(response.data.operations);
+            setMembershipType('free');
+          } catch (error) {
+            setCredits(FREE_CREDITS);
             setOperations([]);
           }
-          setMembershipType('free');
         }
       } catch (error) {
-        console.error('Error initializing credits:', error);
-        // Fallback to local storage if Firestore fails
-        const currentCredits = checkAndResetDailyCredits();
-        setCredits(currentCredits);
+        setCredits(FREE_CREDITS);
         setOperations([]);
         setMembershipType('free');
       } finally {
@@ -105,12 +76,16 @@ export const CreditsProvider = ({ children }) => {
 
     initializeUserCredits();
 
-    // Add interval to check for daily reset
+    // Add interval to check credits for non-logged users
     if (!user) {
-      const interval = setInterval(() => {
-        const currentCredits = checkAndResetDailyCredits();
-        setCredits(currentCredits);
-      }, 60000); // Check every minute
+      const interval = setInterval(async () => {
+        try {
+          const response = await axios.get(`${API_URL}/api/credits/anonymous`);
+          setCredits(response.data.credits);
+          setOperations(response.data.operations);
+        } catch (error) {
+        }
+      }, 10000); // Check every 10 seconds
 
       return () => clearInterval(interval);
     }
@@ -120,12 +95,6 @@ export const CreditsProvider = ({ children }) => {
     if (credits < amount) return false;
 
     try {
-      const newOperation = {
-        type: operationType,
-        cost: amount,
-        timestamp: new Date().toISOString()
-      };
-
       if (user) {
         // Update Firestore for logged-in users
         const userRef = doc(db, 'users', user.uid);
@@ -133,36 +102,50 @@ export const CreditsProvider = ({ children }) => {
         
         if (userDoc.exists()) {
           const currentOperations = userDoc.data().operations || [];
+          const newOperation = {
+            type: operationType,
+            cost: amount,
+            timestamp: new Date().toISOString()
+          };
+
           await updateDoc(userRef, {
             credits: credits - amount,
             operations: [...currentOperations, newOperation],
             lastUpdated: new Date().toISOString()
           });
+
+          setCredits(prev => prev - amount);
+          setOperations(prev => [...prev, newOperation]);
         }
       } else {
-        // Update localStorage for free users
-        localStorage.setItem('freeCredits', (credits - amount).toString());
-        const updatedOperations = [...operations, newOperation];
-        localStorage.setItem('freeOperations', JSON.stringify(updatedOperations));
+        // Use backend API for non-logged users
+        const response = await axios.post(`${API_URL}/api/credits/anonymous/deduct`, {
+          amount,
+          operationType
+        });
+        
+        setCredits(response.data.credits);
+        setOperations(response.data.operations);
       }
-
-      setCredits(prev => prev - amount);
-      setOperations(prev => [...prev, newOperation]);
       return true;
     } catch (error) {
-      console.error('Error deducting credits:', error);
       return false;
     }
   };
 
-  const getOperationCost = (type) => {
-    switch (type) {
+  const getOperationCost = (operation, fileCount = 1) => {
+    switch (operation) {
       case 'geotag':
-        return 3;
-      case 'download':
         return 1;
+      case 'format':
+        return 1;
+      case 'rename':
+        return 1;
+      case 'download_all':
+        // Charge 1 credit for bulk downloads of more than 3 files
+        return fileCount > 3 ? 1 : 0;
       default:
-        return 1;
+        return 0;
     }
   };
 

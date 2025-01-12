@@ -209,14 +209,105 @@
 @media (max-width: 768px) {
   .credit-alert-benefits {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
   }
 
   .package-list {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0;
   }
 
   .credit-alert-modal {
-    padding: 1.5rem;
-    margin: 1rem;
+    padding: 0.75rem;
+    margin: 0.5rem;
+    max-height: 85vh;
+    overflow-y: auto;
+    width: 95%;
+  }
+
+  .credit-alert-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 0.5rem;
+  }
+
+  .credit-alert-icon svg {
+    font-size: 20px;
+  }
+
+  .credit-alert-modal h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .credit-alert-modal p {
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .benefit-item {
+    padding: 0.35rem;
+    gap: 0.25rem;
+  }
+
+  .benefit-icon {
+    font-size: 1rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .benefit-title {
+    font-size: 0.75rem;
+  }
+
+  .benefit-text {
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+
+  .credit-packages {
+    margin-bottom: 0.75rem;
+  }
+
+  .credit-packages h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .package-item {
+    padding: 0.5rem;
+    gap: 0.25rem;
+  }
+
+  .package-name {
+    font-size: 0.85rem;
+  }
+
+  .package-credits {
+    font-size: 0.75rem;
+  }
+
+  .package-price {
+    font-size: 0.9rem;
+  }
+
+  .credit-alert-actions {
+    margin-top: 0.75rem;
+    gap: 0.35rem;
+  }
+
+  .login-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    height: 36px;
+  }
+
+  .cancel-button {
+    font-size: 0.75rem;
+    padding: 0.25rem;
+    height: 32px;
   }
 } 
