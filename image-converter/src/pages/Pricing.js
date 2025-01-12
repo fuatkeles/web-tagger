@@ -81,76 +81,78 @@ const Pricing = () => {
   const { pricingPlans, features, apiTiers } = pricingData;
 
   return (
-    <div className="pricing-page">
-      <div className="pricing-page-overlay">
-        <div className="coming-soon-text">
-          <span>Coming Soon</span>
+    <div className="pricing-container">
+      <div className="pricing-page">
+        <div className="pricing-page-overlay">
+          <div className="coming-soon-text">
+            <span>Coming Soon</span>
+          </div>
         </div>
-      </div>
-      
-      <div className="pricing-hero">
-        <h1>Choose the Perfect Plan</h1>
-        <p>Transform your images with powerful conversion and geotagging features</p>
-        <div className="launch-announcement">
-          <h2>🚀 Special Launch Offer!</h2>
-          <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
+        
+        <div className="pricing-hero">
+          <h1>Choose the Perfect Plan</h1>
+          <p>Transform your images with powerful conversion and geotagging features</p>
+          <div className="launch-announcement">
+            <h2>🚀 Special Launch Offer!</h2>
+            <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
+          </div>
         </div>
-      </div>
 
-      <div className="pricing-section">
-        <h2>Pricing Plans</h2>
-        <div className="pricing-grid">
-          {pricingPlans.map((plan, index) => (
-            <PricingCard key={index} {...plan} />
+        <div className="pricing-section">
+          <h2>Pricing Plans</h2>
+          <div className="pricing-grid">
+            {pricingPlans.map((plan, index) => (
+              <PricingCard key={index} {...plan} />
+            ))}
+          </div>
+          <PayAsYouGo />
+        </div>
+
+        <div className="features-grid">
+          {features.map((feature, index) => (
+            <FeatureSection key={index} {...feature} />
           ))}
         </div>
-        <PayAsYouGo />
-      </div>
 
-      <div className="features-grid">
-        {features.map((feature, index) => (
-          <FeatureSection key={index} {...feature} />
-        ))}
-      </div>
-
-      <div className="api-tiers">
-        <h2>API Access Tiers <span className="coming-soon-text">(Coming Soon)</span></h2>
-        <div className="api-tiers-grid">
-          {apiTiers.map((tier, index) => (
-            <div key={index} className="api-tier">
-              <div className="coming-soon-overlay">
-                <span>Coming Soon</span>
+        <div className="api-tiers">
+          <h2>API Access Tiers <span className="coming-soon-text">(Coming Soon)</span></h2>
+          <div className="api-tiers-grid">
+            {apiTiers.map((tier, index) => (
+              <div key={index} className="api-tier">
+                <div className="coming-soon-overlay">
+                  <span>Coming Soon</span>
+                </div>
+                <h3>{tier.title}</h3>
+                <p>{tier.description}</p>
+                <ul>
+                  {tier.features.map((feature, featureIndex) => (
+                    <li key={featureIndex}>{feature}</li>
+                  ))}
+                </ul>
               </div>
-              <h3>{tier.title}</h3>
-              <p>{tier.description}</p>
-              <ul>
-                {tier.features.map((feature, featureIndex) => (
-                  <li key={featureIndex}>{feature}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="faq-section">
-        <h2>Frequently Asked Questions</h2>
-        <div className="faq-grid">
-          <div className="faq-item">
-            <h3>What are credits?</h3>
-            <p>Credits are used for image conversions and geotagging operations. Each operation costs a specific number of credits based on complexity.</p>
-          </div>
-          <div className="faq-item">
-            <h3>Do credits expire?</h3>
-            <p>Monthly plan credits reset each billing cycle. Lifetime plan credits never expire and can be used at your own pace.</p>
-          </div>
-          <div className="faq-item">
-            <h3>Can I upgrade my plan?</h3>
-            <p>Yes, you can upgrade your plan at any time. The remaining credits will be transferred to your new plan.</p>
-          </div>
-          <div className="faq-item">
-            <h3>What payment methods are accepted?</h3>
-            <p>We accept all major credit cards, PayPal, and bank transfers for business plans.</p>
+        <div className="faq-section">
+          <h2>Frequently Asked Questions</h2>
+          <div className="faq-grid">
+            <div className="faq-item">
+              <h3>What are credits?</h3>
+              <p>Credits are used for image conversions and geotagging operations. Each operation costs a specific number of credits based on complexity.</p>
+            </div>
+            <div className="faq-item">
+              <h3>Do credits expire?</h3>
+              <p>Monthly plan credits reset each billing cycle. Lifetime plan credits never expire and can be used at your own pace.</p>
+            </div>
+            <div className="faq-item">
+              <h3>Can I upgrade my plan?</h3>
+              <p>Yes, you can upgrade your plan at any time. The remaining credits will be transferred to your new plan.</p>
+            </div>
+            <div className="faq-item">
+              <h3>What payment methods are accepted?</h3>
+              <p>We accept all major credit cards, PayPal, and bank transfers for business plans.</p>
+            </div>
           </div>
         </div>
       </div>

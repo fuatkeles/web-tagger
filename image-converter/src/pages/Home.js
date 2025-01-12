@@ -372,19 +372,6 @@ const Home = ({
             </div>
           </div>
         </section>
-
-        <footer className="site-footer">
-          <div className="footer-content">
-            <div className="footer-info">
-              <p>© 2024 Exif Quarter - Image Converter & EXIF Writer</p>
-              <p>Convert between WebP, PNG, and JPG formats while preserving and updating image metadata.</p>
-            </div>
-            <div className="footer-links">
-              <a href="/about">About</a>
-              <a href="https://github.com/yourusername/web-tagger" target="_blank" rel="noopener noreferrer">GitHub</a>
-            </div>
-          </div>
-        </footer>
       </div>
       <CreditAlert 
         isOpen={showCreditAlert}
