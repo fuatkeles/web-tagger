@@ -240,6 +240,7 @@ const Home = ({
               <FaUpload className="upload-icon" />
               <input 
                 type="file" 
+                aria-label="Upload image files"
                 multiple 
                 accept="image/*"
                 onChange={handleFileChange} 
@@ -247,7 +248,7 @@ const Home = ({
               />
               <p className="upload-text">Drag & drop your images here</p>
               <span className="upload-subtext">or click to browse</span>
-              <span className="supported-formats">Supports JPG, PNG, WebP formats</span>
+              <span className="supported-formats"> (Supports JPG, PNG, WebP formats)</span>
             </div>
           </div>
         </section>
