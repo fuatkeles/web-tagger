@@ -647,71 +647,41 @@ body.dark-mode .leaflet-control-geosearch .results {
   background: var(--card-background);
   padding: 2rem;
   border-radius: 16px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
   min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
 }
 
-.feature-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  border-color: var(--button-primary);
-}
-
-.feature-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--button-primary), var(--text-primary));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.feature-item:hover::before {
-  opacity: 1;
-}
-
-.feature-item h3 {
-  font-size: 1.8rem;
-  color: var(--text-primary);
-  margin-bottom: 1.5rem;
-  font-weight: 600;
-  transition: color 0.3s ease;
-}
-
-.feature-item:hover h3 {
-  color: var(--button-primary);
-}
-
-.feature-item p {
-  color: var(--text-secondary);
-  line-height: 1.6;
-  font-size: 1.1rem;
-  margin: 0;
-  opacity: 0.8;
-  transition: opacity 0.3s ease;
-}
-
-.feature-item:hover p {
-  opacity: 0.9;
-}
-
 @media (max-width: 768px) {
-  .features-grid {
-    flex-wrap: wrap;
+  .features-section {
+    padding: 3rem 1.5rem;
   }
-  
+
+  .features-grid {
+    flex-direction: column;
+    padding: 0 1.5rem;
+    gap: 1.5rem;
+  }
+
   .feature-item {
     width: 100%;
+    padding: 1.5rem;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-section {
+    padding: 2rem 1rem;
+  }
+
+  .features-grid {
+    padding: 0 1rem;
+    gap: 1rem;
+  }
+
+  .feature-item {
+    padding: 1.25rem;
   }
 }
 
@@ -798,14 +768,14 @@ body.dark-mode .leaflet-control-geosearch .results {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 3rem;
-  padding: 0 3rem;
+  padding: 0 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .benefit-item {
   position: relative;
-  padding: 2rem;
+  padding: 1.5rem;
   background: var(--card-background);
   border-radius: 16px;
   box-shadow: var(--card-shadow);
@@ -1350,15 +1320,88 @@ body.dark-mode .leaflet-control-geosearch .results {
 }
 
 @media (max-width: 768px) {
-  .credits-status {
-    top: 50%;
+  .credits-status.left {
+    position: fixed;
+    left: 0;
     right: 0;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    min-width: 100%;
+    border-radius: 0;
+    border: none;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, 
+      rgba(6, 182, 212, 0.95), 
+      rgba(45, 212, 191, 0.9)
+    );
   }
 
+  .credits-status.left .credits-count {
+    font-size: 0.85rem;
+    padding: 0;
+  }
+
+  .credits-status.left .credits-count svg {
+    font-size: 1.1rem;
+  }
+
+  .credits-status.left .promo-count {
+    font-size: 0.85rem;
+  }
+
+  .credits-status.left .promotion-text {
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  .credits-status.left .credits-login {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  .credits-status.left .credits-extra {
+    opacity: 1;
+    max-width: none;
+    margin: 0;
+    gap: 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
   .credits-status.left {
-    top: calc(50% + 80px);
-    left: 0;
+    padding: 0.5rem;
+    padding-left: 0.1rem;
+    gap: 0.3rem;
+  }
+
+  .credits-status.left .credits-count {
+    font-size: 0.8rem;
+  }
+
+  .credits-status.left .credits-count svg {
+    font-size: 1.1rem;
+  }
+
+  .credits-status.left .promo-count {
+    font-size: 1rem;
+  }
+
+  .credits-status.left .promotion-text {
+    font-size: 0.8rem;
+  }
+
+  .credits-status.left .credits-login {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.7rem;
   }
 }
 
@@ -1459,5 +1502,145 @@ body.dark-mode .leaflet-control-geosearch .results {
   }
   100% {
     opacity: 0.8;
+  }
+}
+
+@media (max-width: 1200px) {
+  .container {
+    width: 90%;
+    max-width: 90%;
+  }
+
+  .tools-section {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .map-box,
+  .upload-box {
+    width: 100%;
+    height: 400px;
+  }
+}
+
+@media (max-width: 992px) {
+  .images-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .steps-flow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  .features-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: 95%;
+    padding: 1rem;
+  }
+
+  .home-header h1 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .seo-text {
+    text-align: center;
+  }
+
+  .images-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .features-row {
+    grid-template-columns: 1fr;
+  }
+
+  .image-list-item {
+    flex-direction: column;
+  }
+
+  .image-preview {
+    width: 100%;
+    max-width: none;
+  }
+
+  .image-details {
+    width: 100%;
+  }
+
+  .credits-status {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .credits-extra {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .filename-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filename-input,
+  .format-select {
+    width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-buttons button,
+  .action-buttons a {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .credits-status:not(.left) {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0.5rem 0.75rem;
+  }
+
+  .credits-status:not(.left) .credits-extra {
+    display: none;
+  }
+
+  .credits-status:not(.left):hover .credits-extra {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .credits-status:not(.left) {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .credits-status:not(.left) .credits-count {
+    font-size: 0.9rem;
   }
 } 
