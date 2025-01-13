@@ -23,42 +23,18 @@ const ImageListItem = ({
   convertedUrl,
   onDownload
 }) => {
-  const [name, setName] = React.useState(fileName.split('.')[0].replace(/\.[^/.]+$/, ''));
-  const { deductCredits } = useCredits();
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [isConverted, setIsConverted] = useState(false);
+  const [name, setName] = useState(fileName.replace(/\.[^/.]+$/, ""));
+  const [isConverted, setIsConverted] = useState(!!convertedUrl);
 
-  const handleNameChange = async (e) => {
+  const handleNameChange = (e) => {
     const newName = e.target.value;
     setName(newName);
-    
-    // If user is actively typing, don't charge credits
-    if (!isRenaming) {
-      setIsRenaming(true);
-      return;
-    }
-    
-    // When user stops typing for 1 second, charge credits
-    clearTimeout(window.renameTimeout);
-    window.renameTimeout = setTimeout(async () => {
-      if (newName !== fileName.split('.')[0]) {
-        if (await deductCredits(1, 'rename')) {
-          const cleanName = newName.replace(/\.[^/.]+$/, '');
-          onFileNameChange(`${cleanName}.${selectedFormat}`);
-          setIsConverted(true);
-        }
-      }
-      setIsRenaming(false);
-    }, 1000);
+    onFileNameChange(newName);
   };
 
-  const handleFormatChange = async (newFormat) => {
-    if (await deductCredits(1, 'format')) {
-      onFormatChange(newFormat);
-      const cleanName = name.replace(/\.[^/.]+$/, '');
-      onFileNameChange(`${cleanName}.${newFormat}`);
-      setIsConverted(true);
-    }
+  const handleFormatChange = (format) => {
+    onFormatChange(format);
+    setIsConverted(false);
   };
 
   const handleDownload = async () => {
@@ -67,12 +43,12 @@ const ImageListItem = ({
     }
   };
 
-  // Update isConverted when geotagged changes
+  // Update isConverted when convertedUrl or geotagged changes
   useEffect(() => {
-    if (geotagged) {
+    if (convertedUrl || geotagged) {
       setIsConverted(true);
     }
-  }, [geotagged]);
+  }, [convertedUrl, geotagged]);
 
   return (
     <div className="image-list-item">

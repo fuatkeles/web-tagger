@@ -292,8 +292,11 @@ function App() {
       const fileName = `${cleanFileName}.${format}`;
 
       // If the image has been modified (geotagged or converted), use that version
-      if (convertedImages[index]?.url) {
-        const response = await fetch(convertedImages[index].url);
+      if (convertedImages[index]) {
+        const response = await fetch(convertedImages[index]);
+        if (!response.ok) {
+          throw new Error('Failed to fetch converted image');
+        }
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -332,17 +335,16 @@ function App() {
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
 
-      // Store the converted version
+      // Store the converted version's URL
       const newConvertedImages = { ...convertedImages };
-      newConvertedImages[index] = {
-        url: url,
-        format: format,
-        modified: true
-      };
+      newConvertedImages[index] = url;
       setConvertedImages(newConvertedImages);
+      
+      // Cleanup the temporary URL after storing
+      window.URL.revokeObjectURL(url);
     } catch (error) {
+      console.error('Error downloading file:', error);
       alert('Error downloading file. Please try again.');
     }
   };
@@ -357,7 +359,7 @@ function App() {
       // Check if the image has been modified in any way (converted, geotagged, renamed, or format changed)
       const hasModifiedFormat = fileFormats[index] !== images[index].name.split('.').pop();
       const hasModifiedName = fileNames[index] !== images[index].name.split('.')[0];
-      const hasBeenConverted = convertedImages[index]?.url;
+      const hasBeenConverted = convertedImages[index];
       const hasBeenGeotagged = geotagged[index];
 
       if (!hasModifiedFormat && !hasModifiedName && !hasBeenConverted && !hasBeenGeotagged) {
@@ -375,9 +377,9 @@ function App() {
 
         if (hasBeenConverted || hasBeenGeotagged) {
           // Use the converted/geotagged version if available
-          const response = await fetch(convertedImages[index].url);
+          const response = await fetch(convertedImages[index]);
           if (!response.ok) {
-            continue;
+            throw new Error('Failed to fetch converted image');
           }
           blob = await response.blob();
         } else if (hasModifiedFormat || hasModifiedName) {
@@ -395,14 +397,10 @@ function App() {
           });
           blob = new Blob([response.data], { type: `image/${format}` });
 
-          // Store the converted version
-          const url = URL.createObjectURL(blob);
+          // Store the converted version's URL
+          const url = window.URL.createObjectURL(blob);
           const newConvertedImages = { ...convertedImages };
-          newConvertedImages[index] = {
-            url: url,
-            format: format,
-            modified: true
-          };
+          newConvertedImages[index] = url;
           setConvertedImages(newConvertedImages);
         }
 
@@ -412,12 +410,13 @@ function App() {
           processedCount++;
         }
       } catch (error) {
-        console.warn(`Error processing image at index ${index}:`, error);
+        console.error('Error processing image at index ${index}:', error);
       }
     }
 
     if (processedCount > 0) {
-      zip.generateAsync({ type: "blob" }).then((content) => {
+      try {
+        const content = await zip.generateAsync({ type: "blob" });
         const url = window.URL.createObjectURL(content);
         const link = document.createElement('a');
         link.href = url;
@@ -426,7 +425,10 @@ function App() {
         link.click();
         link.parentNode.removeChild(link);
         window.URL.revokeObjectURL(url);
-      });
+      } catch (error) {
+        console.error('Error generating zip file:', error);
+        alert('Error creating zip file. Please try again.');
+      }
     } else {
       alert('No processed images to download. Please modify at least one image first.');
     }
