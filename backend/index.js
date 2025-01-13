@@ -15,7 +15,8 @@ require('dotenv').config();
 const app = express();
 
 // Body parser middleware
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Security Middleware
 app.use(helmet());
@@ -41,7 +42,8 @@ app.use(cors({
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB limit
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024, // 100MB limit
+    fieldSize: 100 * 1024 * 1024 // 100MB limit for form fields
   },
   fileFilter: (req, file, cb) => {
     // Allow only specific image types
