@@ -92,11 +92,11 @@ function App() {
   const [menuActive, setMenuActive] = useState(false);
   const [fileFormats, setFileFormats] = useState([]);
 
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+
   const toggleMenu = () => {
     setMenuActive(!menuActive);
   };
-
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -104,7 +104,7 @@ function App() {
     // Check file sizes
     const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
-      alert(`Following files are too large (max 10MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
+      alert(`Following files are too large (max 100MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
       return;
     }
 
@@ -153,7 +153,7 @@ function App() {
     // Check file sizes
     const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
     if (oversizedFiles.length > 0) {
-      alert(`Following files are too large (max 10MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
+      alert(`Following files are too large (max 100MB):\n${oversizedFiles.map(f => f.name).join('\n')}`);
       return;
     }
 
@@ -186,7 +186,7 @@ function App() {
 
     // Check file size before processing
     if (images[index].size > MAX_FILE_SIZE) {
-      alert('File is too large to process (max 10MB). Please try with a smaller file.');
+      alert('File is too large to process (max 100MB). Please try with a smaller file.');
       return;
     }
 
@@ -279,7 +279,7 @@ function App() {
     try {
       // Check file size before processing
       if (images[index].size > MAX_FILE_SIZE) {
-        alert('File is too large to process (max 10MB). Please try with a smaller file.');
+        alert('File is too large to process (max 100MB). Please try with a smaller file.');
         return;
       }
 
