@@ -184,7 +184,6 @@ function App() {
       return;
     }
 
-    // Check file size before processing
     if (images[index].size > MAX_FILE_SIZE) {
       alert('File is too large to process (max 100MB). Please try with a smaller file.');
       return;
@@ -193,7 +192,6 @@ function App() {
     setLoading(prev => ({ ...prev, [index]: true }));
     
     try {
-      // Get the current file name and format
       const format = fileFormats[index] || 'webp';
       const cleanFileName = fileNames[index]
         .replace(/\.(png|jpe?g|webp)$/i, '')
@@ -212,33 +210,34 @@ function App() {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',
-        }
-      }).catch(error => {
-        if (error.response && error.response.status === 413) {
-          throw new Error('File is too large to process. Please try with a smaller file.');
-        }
-        throw error;
+        },
+        timeout: 30000 // 30 second timeout
       });
 
-      // Create a blob with the correct type
       const blob = new Blob([response.data], { type: `image/${format}` });
-      const url = URL.createObjectURL(blob);
       
-      // Update convertedImages with the geotagged version
-      const newConvertedImages = { ...convertedImages };
-      newConvertedImages[index] = {
-        url,
-        format,
-        geotagged: true,
-        modified: true,
-        location: {
-          lat: location.lat,
-          lng: location.lng
+      // Cleanup previous URL if exists
+      if (convertedImages[index]?.url) {
+        URL.revokeObjectURL(convertedImages[index].url);
+      }
+      
+      const url = URL.createObjectURL(blob);
+      setConvertedImages(prev => ({
+        ...prev,
+        [index]: {
+          url,
+          format,
+          geotagged: true,
+          modified: true,
+          location: {
+            lat: location.lat,
+            lng: location.lng
+          }
         }
-      };
-      setConvertedImages(newConvertedImages);
+      }));
       setGeotagged(prev => ({ ...prev, [index]: true }));
     } catch (error) {
+      console.error('Error adding geotag:', error);
       alert(error.message || 'Error adding geotag. Please try again.');
     } finally {
       setLoading(prev => ({ ...prev, [index]: false }));
@@ -277,7 +276,6 @@ function App() {
 
   const handleDownload = async (index) => {
     try {
-      // Check file size before processing
       if (images[index].size > MAX_FILE_SIZE) {
         alert('File is too large to process (max 100MB). Please try with a smaller file.');
         return;
@@ -291,76 +289,66 @@ function App() {
         .replace(/\s+/g, '-');
       const fileName = `${cleanFileName}.${format}`;
 
-      // If the image has been modified (geotagged or converted), use that version
+      let downloadUrl;
+      let downloadBlob;
+
       if (convertedImages[index]?.url) {
         const response = await fetch(convertedImages[index].url);
         if (!response.ok) {
           throw new Error('Failed to fetch converted image');
         }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        return;
-      }
+        downloadBlob = await response.blob();
+        downloadUrl = URL.createObjectURL(downloadBlob);
+      } else {
+        const hasModifiedFormat = format !== image.name.split('.').pop();
+        const hasModifiedName = cleanFileName !== image.name.split('.')[0];
 
-      // Check if format or name has been modified
-      const hasModifiedFormat = format !== image.name.split('.').pop();
-      const hasModifiedName = cleanFileName !== image.name.split('.')[0];
+        if (!hasModifiedFormat && !hasModifiedName) {
+          downloadUrl = URL.createObjectURL(image);
+        } else {
+          const formData = new FormData();
+          formData.append('image', image);
+          formData.append('format', format);
+          formData.append('newFileName', fileName);
 
-      // If not modified and no format/name change, download original
-      if (!hasModifiedFormat && !hasModifiedName) {
-        const url = URL.createObjectURL(image);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', image.name);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        return;
-      }
+          const response = await axios.post(`${API_URL}/convert`, formData, {
+            responseType: 'blob',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            timeout: 30000 // 30 second timeout
+          });
 
-      // Convert and download if format or name changed
-      const formData = new FormData();
-      formData.append('image', image);
-      formData.append('format', format);
-      formData.append('newFileName', fileName);
+          downloadBlob = new Blob([response.data], { type: `image/${format}` });
+          downloadUrl = URL.createObjectURL(downloadBlob);
 
-      const response = await axios.post(`${API_URL}/convert`, formData, {
-        responseType: 'blob',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }).catch(error => {
-        if (error.response && error.response.status === 413) {
-          throw new Error('File is too large to process. Please try with a smaller file.');
+          // Store the converted version
+          if (convertedImages[index]?.url) {
+            URL.revokeObjectURL(convertedImages[index].url);
+          }
+          setConvertedImages(prev => ({
+            ...prev,
+            [index]: {
+              url: downloadUrl,
+              format,
+              modified: true
+            }
+          }));
         }
-        throw error;
-      });
+      }
 
-      const blob = new Blob([response.data], { type: `image/${format}` });
-      const url = window.URL.createObjectURL(blob);
+      // Download the file
       const link = document.createElement('a');
-      link.href = url;
+      link.href = downloadUrl;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
+      document.body.removeChild(link);
 
-      // Store the converted version
-      const newConvertedImages = { ...convertedImages };
-      newConvertedImages[index] = {
-        url,
-        format,
-        modified: true
-      };
-      setConvertedImages(newConvertedImages);
+      // Cleanup if it's a temporary URL
+      if (!convertedImages[index]?.url || downloadUrl !== convertedImages[index].url) {
+        URL.revokeObjectURL(downloadUrl);
+      }
     } catch (error) {
       console.error('Error downloading file:', error);
       alert('Error downloading file. Please try again.');
@@ -371,10 +359,9 @@ function App() {
     const zip = new JSZip();
     const folder = zip.folder("images");
     let processedCount = 0;
+    const promises = [];
 
-    // Process each image
     for (let index = 0; index < images.length; index++) {
-      // Check if the image has been modified in any way (converted, geotagged, renamed, or format changed)
       const hasModifiedFormat = fileFormats[index] !== images[index].name.split('.').pop();
       const hasModifiedName = fileNames[index] !== images[index].name.split('.')[0];
       const hasBeenConverted = convertedImages[index]?.url;
@@ -384,75 +371,81 @@ function App() {
         continue;
       }
 
-      try {
-        let blob;
-        const format = fileFormats[index] || 'webp';
-        const cleanFileName = fileNames[index]
-          .replace(/\.(png|jpe?g|webp)$/i, '')
-          .replace(/\.[^/.]+$/, '')
-          .replace(/\s+/g, '-');
-        const fileName = `${cleanFileName}.${format}`;
+      promises.push((async () => {
+        try {
+          let blob;
+          const format = fileFormats[index] || 'webp';
+          const cleanFileName = fileNames[index]
+            .replace(/\.(png|jpe?g|webp)$/i, '')
+            .replace(/\.[^/.]+$/, '')
+            .replace(/\s+/g, '-');
+          const fileName = `${cleanFileName}.${format}`;
 
-        if (hasBeenConverted || hasBeenGeotagged) {
-          // Use the converted/geotagged version if available
-          const response = await fetch(convertedImages[index].url);
-          if (!response.ok) {
-            throw new Error('Failed to fetch converted image');
+          if (hasBeenConverted || hasBeenGeotagged) {
+            const response = await fetch(convertedImages[index].url);
+            if (!response.ok) {
+              throw new Error('Failed to fetch converted image');
+            }
+            blob = await response.blob();
+          } else if (hasModifiedFormat || hasModifiedName) {
+            const formData = new FormData();
+            formData.append('image', images[index]);
+            formData.append('format', format);
+            formData.append('newFileName', fileName);
+
+            const response = await axios.post(`${API_URL}/convert`, formData, {
+              responseType: 'blob',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+              timeout: 30000
+            });
+            
+            blob = new Blob([response.data], { type: `image/${format}` });
+            const url = URL.createObjectURL(blob);
+            
+            if (convertedImages[index]?.url) {
+              URL.revokeObjectURL(convertedImages[index].url);
+            }
+            setConvertedImages(prev => ({
+              ...prev,
+              [index]: {
+                url,
+                format,
+                modified: true
+              }
+            }));
           }
-          blob = await response.blob();
-        } else if (hasModifiedFormat || hasModifiedName) {
-          // Convert the image with new format/name
-          const formData = new FormData();
-          formData.append('image', images[index]);
-          formData.append('format', format);
-          formData.append('newFileName', fileName);
 
-          const response = await axios.post(`${API_URL}/convert`, formData, {
-            responseType: 'blob',
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-          blob = new Blob([response.data], { type: `image/${format}` });
-
-          // Store the converted version
-          const url = window.URL.createObjectURL(blob);
-          const newConvertedImages = { ...convertedImages };
-          newConvertedImages[index] = {
-            url,
-            format,
-            modified: true
-          };
-          setConvertedImages(newConvertedImages);
+          if (blob) {
+            folder.file(fileName, blob);
+            processedCount++;
+          }
+        } catch (error) {
+          console.error(`Error processing image at index ${index}:`, error);
         }
-
-        if (blob) {
-          // Add to zip
-          folder.file(fileName, blob);
-          processedCount++;
-        }
-      } catch (error) {
-        console.error(`Error processing image at index ${index}:`, error);
-      }
+      })());
     }
 
-    if (processedCount > 0) {
-      try {
+    try {
+      await Promise.all(promises);
+
+      if (processedCount > 0) {
         const content = await zip.generateAsync({ type: "blob" });
-        const url = window.URL.createObjectURL(content);
+        const url = URL.createObjectURL(content);
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', "images.zip");
         document.body.appendChild(link);
         link.click();
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('Error generating zip file:', error);
-        alert('Error creating zip file. Please try again.');
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        alert('No processed images to download. Please modify at least one image first.');
       }
-    } else {
-      alert('No processed images to download. Please modify at least one image first.');
+    } catch (error) {
+      console.error('Error generating zip file:', error);
+      alert('Error creating zip file. Please try again.');
     }
   };
   
