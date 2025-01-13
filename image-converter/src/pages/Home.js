@@ -24,23 +24,22 @@ const ImageListItem = ({
   onDownload
 }) => {
   const [name, setName] = useState(fileName.replace(/\.[^/.]+$/, ""));
-  const [isConverted, setIsConverted] = useState(!!convertedUrl);
+  const [isConverted, setIsConverted] = useState(false);
 
   const handleNameChange = (e) => {
     const newName = e.target.value;
     setName(newName);
     onFileNameChange(newName);
+    setIsConverted(true);
   };
 
   const handleFormatChange = (format) => {
     onFormatChange(format);
-    setIsConverted(false);
+    setIsConverted(true);
   };
 
   const handleDownload = async () => {
-    if (isConverted || geotagged) {
-      onDownload();
-    }
+    onDownload();
   };
 
   // Update isConverted when convertedUrl or geotagged changes
@@ -97,15 +96,13 @@ const ImageListItem = ({
             </button>
           )}
 
-          {(isConverted || geotagged) && (
-            <button 
-              onClick={handleDownload}
-              className="download-button"
-            >
-              <FaCheckCircle />
-              Download
-            </button>
-          )}
+          <button 
+            onClick={handleDownload}
+            className="download-button"
+          >
+            <FaCheckCircle />
+            Download
+          </button>
 
           <button className="remove-button" onClick={onRemove}>
             <FaTimes />

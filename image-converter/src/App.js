@@ -292,8 +292,8 @@ function App() {
       const fileName = `${cleanFileName}.${format}`;
 
       // If the image has been modified (geotagged or converted), use that version
-      if (convertedImages[index]) {
-        const response = await fetch(convertedImages[index]);
+      if (convertedImages[index]?.url) {
+        const response = await fetch(convertedImages[index].url);
         if (!response.ok) {
           throw new Error('Failed to fetch converted image');
         }
@@ -309,7 +309,24 @@ function App() {
         return;
       }
 
-      // If not modified yet, convert and download
+      // Check if format or name has been modified
+      const hasModifiedFormat = format !== image.name.split('.').pop();
+      const hasModifiedName = cleanFileName !== image.name.split('.')[0];
+
+      // If not modified and no format/name change, download original
+      if (!hasModifiedFormat && !hasModifiedName) {
+        const url = URL.createObjectURL(image);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', image.name);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Convert and download if format or name changed
       const formData = new FormData();
       formData.append('image', image);
       formData.append('format', format);
@@ -336,13 +353,14 @@ function App() {
       link.click();
       link.parentNode.removeChild(link);
 
-      // Store the converted version's URL
+      // Store the converted version
       const newConvertedImages = { ...convertedImages };
-      newConvertedImages[index] = url;
+      newConvertedImages[index] = {
+        url,
+        format,
+        modified: true
+      };
       setConvertedImages(newConvertedImages);
-      
-      // Cleanup the temporary URL after storing
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading file:', error);
       alert('Error downloading file. Please try again.');
@@ -359,7 +377,7 @@ function App() {
       // Check if the image has been modified in any way (converted, geotagged, renamed, or format changed)
       const hasModifiedFormat = fileFormats[index] !== images[index].name.split('.').pop();
       const hasModifiedName = fileNames[index] !== images[index].name.split('.')[0];
-      const hasBeenConverted = convertedImages[index];
+      const hasBeenConverted = convertedImages[index]?.url;
       const hasBeenGeotagged = geotagged[index];
 
       if (!hasModifiedFormat && !hasModifiedName && !hasBeenConverted && !hasBeenGeotagged) {
@@ -377,7 +395,7 @@ function App() {
 
         if (hasBeenConverted || hasBeenGeotagged) {
           // Use the converted/geotagged version if available
-          const response = await fetch(convertedImages[index]);
+          const response = await fetch(convertedImages[index].url);
           if (!response.ok) {
             throw new Error('Failed to fetch converted image');
           }
@@ -397,10 +415,14 @@ function App() {
           });
           blob = new Blob([response.data], { type: `image/${format}` });
 
-          // Store the converted version's URL
+          // Store the converted version
           const url = window.URL.createObjectURL(blob);
           const newConvertedImages = { ...convertedImages };
-          newConvertedImages[index] = url;
+          newConvertedImages[index] = {
+            url,
+            format,
+            modified: true
+          };
           setConvertedImages(newConvertedImages);
         }
 
@@ -410,7 +432,7 @@ function App() {
           processedCount++;
         }
       } catch (error) {
-        console.error('Error processing image at index ${index}:', error);
+        console.error(`Error processing image at index ${index}:`, error);
       }
     }
 
