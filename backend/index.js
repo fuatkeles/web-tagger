@@ -10,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const xss = require('xss-clean');
 const hpp = require('hpp');
+const Redis = require('ioredis');
 require('dotenv').config();
 
 const app = express();
@@ -73,65 +74,91 @@ const errorHandler = (err, req, res, next) => {
 };
 
 // IP based credit tracking for non-logged users
-const ipCredits = new Map();
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 // Middleware to track IP-based credits
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
-  if (!ipCredits.has(clientIP)) {
-    ipCredits.set(clientIP, {
+  const key = `credits:${clientIP}`;
+  
+  try {
+    let creditInfo = await redis.get(key);
+    
+    if (!creditInfo) {
+      creditInfo = JSON.stringify({
+        credits: 15,
+        lastUsed: new Date().getTime(),
+        operations: []
+      });
+      await redis.set(key, creditInfo);
+    } else {
+      creditInfo = JSON.parse(creditInfo);
+      
+      // Check if 24 hours passed since last use
+      const now = new Date().getTime();
+      const timeSinceLastUse = now - creditInfo.lastUsed;
+      
+      if (timeSinceLastUse >= 24 * 60 * 60 * 1000) { // 24 hours
+        creditInfo = {
+          credits: 15,
+          lastUsed: now,
+          operations: []
+        };
+        await redis.set(key, JSON.stringify(creditInfo));
+      }
+    }
+    
+    req.ipCredits = creditInfo;
+    next();
+  } catch (error) {
+    console.error('Redis error:', error);
+    req.ipCredits = {
       credits: 15,
       lastUsed: new Date().getTime(),
       operations: []
-    });
+    };
+    next();
   }
-  req.ipCredits = ipCredits.get(clientIP);
-  next();
 });
 
 // Endpoint to get credits for non-logged users
-app.get('/api/credits/anonymous', (req, res) => {
-  const clientIP = req.ip || req.connection.remoteAddress;
-  const creditInfo = ipCredits.get(clientIP);
-  
-  // Check if 24 hours passed since last use
-  const now = new Date().getTime();
-  if (creditInfo && creditInfo.lastUsed) {
-    const timeSinceLastUse = now - creditInfo.lastUsed;
-    if (timeSinceLastUse >= 24 * 60 * 60 * 1000) { // 24 hours
-      creditInfo.credits = 15;
-      creditInfo.lastUsed = now;
-    }
-  }
-  
+app.get('/api/credits/anonymous', async (req, res) => {
   res.json({
-    credits: creditInfo.credits,
-    operations: creditInfo.operations
+    credits: req.ipCredits.credits,
+    operations: req.ipCredits.operations
   });
 });
 
 // Endpoint to deduct credits for non-logged users
-app.post('/api/credits/anonymous/deduct', (req, res) => {
+app.post('/api/credits/anonymous/deduct', async (req, res) => {
   const { amount, operationType } = req.body;
   const clientIP = req.ip || req.connection.remoteAddress;
-  const creditInfo = ipCredits.get(clientIP);
-  
+  const key = `credits:${clientIP}`;
+  const creditInfo = req.ipCredits;
+
   if (!creditInfo || creditInfo.credits < amount) {
     return res.status(400).json({ error: 'Insufficient credits' });
   }
-  
-  creditInfo.credits -= amount;
-  creditInfo.lastUsed = new Date().getTime();
-  creditInfo.operations.push({
-    type: operationType,
-    cost: amount,
-    timestamp: new Date().toISOString()
-  });
-  
-  res.json({
-    credits: creditInfo.credits,
-    operations: creditInfo.operations
-  });
+
+  try {
+    creditInfo.credits -= amount;
+    creditInfo.lastUsed = new Date().getTime();
+    creditInfo.operations.push({
+      type: operationType,
+      cost: amount,
+      timestamp: new Date().toISOString()
+    });
+
+    await redis.set(key, JSON.stringify(creditInfo));
+
+    res.json({
+      credits: creditInfo.credits,
+      operations: creditInfo.operations
+    });
+  } catch (error) {
+    console.error('Redis error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, res, next) => {
