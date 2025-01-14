@@ -33,9 +33,9 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: [config.frontendUrl, 'https://www.exifquarter.com', 'https://exifquarter.com'],
+  origin: 'https://exifquarter.com',
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400
 }));
