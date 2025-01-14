@@ -21,11 +21,15 @@ const ImageListItem = ({
   onRemove,
   selectedFormat,
   convertedUrl,
-  onDownload
+  onDownload,
+  showCreditAlert,
+  setShowCreditAlert
 }) => {
   const [name, setName] = useState(fileName.replace(/\.[^/.]+$/, ""));
   const [isConverted, setIsConverted] = useState(false);
-  const { deductCredits, getOperationCost } = useCredits();
+  const [hasFormatChanged, setHasFormatChanged] = useState(false);
+  const { deductCredits, getOperationCost, credits } = useCredits();
+  const { user } = useAuth();
 
   const handleNameChange = (e) => {
     const newName = e.target.value;
@@ -35,14 +39,28 @@ const ImageListItem = ({
   };
 
   const handleFormatChange = async (format) => {
+    if (hasFormatChanged) {
+      // If format has already been changed once, don't charge credits
+      onFormatChange(format);
+      return;
+    }
+
     const cost = getOperationCost('format');
+    
+    if (credits < cost) {
+      if (!user) {
+        setShowCreditAlert(true);
+        return;
+      } else {
+        alert('Insufficient credits. Please wait for credit renewal.');
+        return;
+      }
+    }
     
     if (await deductCredits(cost, 'format')) {
       onFormatChange(format);
       setIsConverted(true);
-    } else {
-      // If credit deduction fails, don't change the format
-      return;
+      setHasFormatChanged(true);
     }
   };
 
@@ -308,6 +326,8 @@ const Home = ({
                     selectedFormat={fileFormats[index]}
                     convertedUrl={convertedImages[index]?.url}
                     onDownload={() => handleDownloadWithCredits(index)}
+                    showCreditAlert={showCreditAlert}
+                    setShowCreditAlert={setShowCreditAlert}
                   />
                 ))}
               </div>
@@ -410,10 +430,12 @@ const Home = ({
           </div>
         </section>
       </div>
-      <CreditAlert 
-        isOpen={showCreditAlert}
-        onClose={() => setShowCreditAlert(false)}
-      />
+      {showCreditAlert && (
+        <CreditAlert 
+          onClose={() => setShowCreditAlert(false)}
+          onLogin={signInWithGoogle}
+        />
+      )}
     </div>
   );
 };

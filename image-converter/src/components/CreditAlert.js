@@ -1,16 +1,11 @@
 import React from 'react';
 import { FaCoins, FaGoogle, FaHistory, FaSave, FaCloudDownloadAlt, FaRocket } from 'react-icons/fa';
-import { useAuth } from '../context/AuthContext';
 import './CreditAlert.css';
 
-const CreditAlert = ({ isOpen, onClose }) => {
-  const { signInWithGoogle } = useAuth();
-
-  if (!isOpen) return null;
-
+const CreditAlert = ({ onClose, onLogin }) => {
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      await onLogin();
       onClose();
     } catch (error) {
       console.error('Error signing in with Google:', error);
