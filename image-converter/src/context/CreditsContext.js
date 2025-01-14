@@ -4,8 +4,12 @@ import { db } from '../firebase/firebase';
 import { doc, getDoc, setDoc, updateDoc } from '@firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import axios from 'axios';
+import config from '../config';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const getApiUrl = (endpoint) => {
+  const baseUrl = config.apiUrl.endsWith('/api') ? config.apiUrl.slice(0, -4) : config.apiUrl;
+  return `${baseUrl}/api${endpoint}`;
+};
 
 const CreditsContext = createContext();
 
@@ -24,9 +28,15 @@ export const CreditsProvider = ({ children }) => {
   // Function to fetch anonymous credits
   const fetchAnonymousCredits = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/credits/anonymous`);
-      setCredits(response.data.credits);
-      setOperations(response.data.operations);
+      const response = await axios.get(getApiUrl('/credits/anonymous'));
+      if (response.data && typeof response.data.credits === 'number') {
+        setCredits(response.data.credits);
+        setOperations(response.data.operations || []);
+      } else {
+        console.error('Invalid credits data received:', response.data);
+        setCredits(FREE_CREDITS);
+        setOperations([]);
+      }
     } catch (error) {
       console.error('Error fetching anonymous credits:', error);
       setCredits(FREE_CREDITS);
@@ -86,7 +96,7 @@ export const CreditsProvider = ({ children }) => {
     // Set up periodic refresh for anonymous users
     let refreshInterval;
     if (!user) {
-      refreshInterval = setInterval(fetchAnonymousCredits, 60000); // Refresh every minute
+      refreshInterval = setInterval(fetchAnonymousCredits, config.refreshInterval);
     }
 
     return () => {
@@ -124,13 +134,17 @@ export const CreditsProvider = ({ children }) => {
         }
       } else {
         // Use backend API for non-logged users
-        const response = await axios.post(`${API_URL}/api/credits/anonymous/deduct`, {
+        const response = await axios.post(getApiUrl('/credits/anonymous/deduct'), {
           amount,
           operationType
         });
         
-        setCredits(response.data.credits);
-        setOperations(response.data.operations);
+        if (response.data && typeof response.data.credits === 'number') {
+          setCredits(response.data.credits);
+          setOperations(response.data.operations || []);
+        } else {
+          throw new Error('Invalid response from credit deduction');
+        }
       }
       return true;
     } catch (error) {
@@ -144,8 +158,6 @@ export const CreditsProvider = ({ children }) => {
       case 'geotag':
         return 1;
       case 'format':
-        return 1;
-      case 'rename':
         return 1;
       case 'download_all':
         // Charge 1 credit for bulk downloads of more than 3 files

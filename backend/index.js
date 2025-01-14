@@ -11,7 +11,7 @@ const { body, validationResult } = require('express-validator');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const Redis = require('ioredis');
-require('dotenv').config();
+const config = require('./config');
 
 const app = express();
 
@@ -26,18 +26,18 @@ app.use(hpp());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100 // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
 });
 app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: ['https://www.exifquarter.com', 'https://exifquarter.com', process.env.FRONTEND_URL || 'http://localhost:3000'],
+  origin: [config.frontendUrl, 'https://www.exifquarter.com', 'https://exifquarter.com'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
   credentials: true,
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 }));
 
 // File upload configuration
@@ -73,26 +73,86 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-// IP based credit tracking for non-logged users
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+// Redis Configuration
+const redisOptions = {
+  ...config.redis,
+  retryStrategy: function(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  autoResubscribe: true
+};
 
-// Middleware to track IP-based credits
+let redis = null;
+
+const initRedis = () => {
+  try {
+    redis = new Redis(config.redis.url || redisOptions);
+
+    redis.on('error', (err) => {
+      console.error('Redis connection error:', err);
+    });
+
+    redis.on('connect', () => {
+      console.log('Successfully connected to Redis');
+    });
+
+    redis.on('ready', () => {
+      console.log('Redis is ready to accept commands');
+    });
+
+    redis.on('reconnecting', () => {
+      console.log('Reconnecting to Redis...');
+    });
+
+    return redis;
+  } catch (error) {
+    console.error('Failed to initialize Redis:', error);
+    return null;
+  }
+};
+
+redis = initRedis();
+
+// Middleware to track IP-based credits with fallback
 app.use(async (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   const key = `credits:${clientIP}`;
   
   try {
-    let creditInfo = await redis.get(key);
-    
-    if (!creditInfo) {
-      creditInfo = JSON.stringify({
+    if (!redis || redis.status !== 'ready') {
+      console.log('Redis not ready, using fallback');
+      req.ipCredits = {
         credits: 15,
         lastUsed: new Date().getTime(),
         operations: []
-      });
-      await redis.set(key, creditInfo);
+      };
+      return next();
+    }
+
+    let creditInfo = await redis.get(key);
+    
+    if (!creditInfo) {
+      creditInfo = {
+        credits: 15,
+        lastUsed: new Date().getTime(),
+        operations: []
+      };
+      await redis.set(key, JSON.stringify(creditInfo));
     } else {
-      creditInfo = JSON.parse(creditInfo);
+      try {
+        creditInfo = JSON.parse(creditInfo);
+      } catch (e) {
+        console.error('Error parsing credit info:', e);
+        creditInfo = {
+          credits: 15,
+          lastUsed: new Date().getTime(),
+          operations: []
+        };
+        await redis.set(key, JSON.stringify(creditInfo));
+      }
       
       // Check if 24 hours passed since last use
       const now = new Date().getTime();
@@ -109,27 +169,36 @@ app.use(async (req, res, next) => {
     }
     
     req.ipCredits = creditInfo;
-    next();
   } catch (error) {
-    console.error('Redis error:', error);
+    console.error('Redis operation error:', error);
+    // Fallback to in-memory credits if Redis fails
     req.ipCredits = {
       credits: 15,
       lastUsed: new Date().getTime(),
       operations: []
     };
-    next();
+  }
+  next();
+});
+
+// Endpoint to get credits for non-logged users with error handling
+app.get('/api/credits/anonymous', async (req, res) => {
+  try {
+    res.json({
+      credits: req.ipCredits.credits,
+      operations: req.ipCredits.operations
+    });
+  } catch (error) {
+    console.error('Error getting anonymous credits:', error);
+    res.status(500).json({
+      credits: 15,
+      operations: [],
+      error: 'Internal server error'
+    });
   }
 });
 
-// Endpoint to get credits for non-logged users
-app.get('/api/credits/anonymous', async (req, res) => {
-  res.json({
-    credits: req.ipCredits.credits,
-    operations: req.ipCredits.operations
-  });
-});
-
-// Endpoint to deduct credits for non-logged users
+// Endpoint to deduct credits for non-logged users with better error handling
 app.post('/api/credits/anonymous/deduct', async (req, res) => {
   const { amount, operationType } = req.body;
   const clientIP = req.ip || req.connection.remoteAddress;
@@ -137,10 +206,18 @@ app.post('/api/credits/anonymous/deduct', async (req, res) => {
   const creditInfo = req.ipCredits;
 
   if (!creditInfo || creditInfo.credits < amount) {
-    return res.status(400).json({ error: 'Insufficient credits' });
+    return res.status(400).json({ 
+      error: 'Insufficient credits',
+      credits: creditInfo?.credits || 0
+    });
   }
 
   try {
+    let isRedisConnected = redis.status === 'ready';
+    if (!isRedisConnected) {
+      throw new Error('Redis not connected');
+    }
+
     creditInfo.credits -= amount;
     creditInfo.lastUsed = new Date().getTime();
     creditInfo.operations.push({
@@ -156,8 +233,11 @@ app.post('/api/credits/anonymous/deduct', async (req, res) => {
       operations: creditInfo.operations
     });
   } catch (error) {
-    console.error('Redis error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error deducting credits:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      credits: req.ipCredits.credits
+    });
   }
 });
 
@@ -330,7 +410,7 @@ app.post('/convert', upload.single('image'), async (req, res, next) => {
 // Apply error handling middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5001;
+const PORT = config.port;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
