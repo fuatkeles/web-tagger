@@ -7,8 +7,7 @@ import axios from 'axios';
 import config from '../config';
 
 const getApiUrl = (endpoint) => {
-  const baseUrl = config.apiUrl.endsWith('/api') ? config.apiUrl.slice(0, -4) : config.apiUrl;
-  return `${baseUrl}/api${endpoint}`;
+  return `${config.apiUrl}/api${endpoint}`;
 };
 
 const CreditsContext = createContext();
