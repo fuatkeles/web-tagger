@@ -45,6 +45,7 @@ const Navbar = () => {
           <div className="nav-right">
             {/* Desktop Menu */}
             <div className="desktop-menu">
+              <Link to="/">Home</Link>
               <Link to="/about">About</Link>
               <Link to="/pricing">Pricing</Link>
               <button 
@@ -99,6 +100,7 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="mobile-menu">
             <div className="menu-items">
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
               <Link to="/about" onClick={() => setIsMobileMenuOpen(false)}>About</Link>
               <Link to="/pricing" onClick={() => setIsMobileMenuOpen(false)}>Pricing</Link>
               <button 
