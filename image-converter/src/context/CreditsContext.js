@@ -13,7 +13,6 @@ export const useCredits = () => useContext(CreditsContext);
 
 const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
-let lastOperation = null;
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
@@ -21,6 +20,19 @@ export const CreditsProvider = ({ children }) => {
   const [operations, setOperations] = useState([]);
   const [membershipType, setMembershipType] = useState('free');
   const [loading, setLoading] = useState(true);
+
+  // Function to fetch anonymous credits
+  const fetchAnonymousCredits = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/credits/anonymous`);
+      setCredits(response.data.credits);
+      setOperations(response.data.operations);
+    } catch (error) {
+      console.error('Error fetching anonymous credits:', error);
+      setCredits(FREE_CREDITS);
+      setOperations([]);
+    }
+  };
 
   useEffect(() => {
     const initializeUserCredits = async () => {
@@ -56,17 +68,11 @@ export const CreditsProvider = ({ children }) => {
           }
         } else {
           // Not logged in, get credits from backend API
-          try {
-            const response = await axios.get(`${API_URL}/api/credits/anonymous`);
-            setCredits(response.data.credits);
-            setOperations(response.data.operations);
-            setMembershipType('free');
-          } catch (error) {
-            setCredits(FREE_CREDITS);
-            setOperations([]);
-          }
+          await fetchAnonymousCredits();
+          setMembershipType('free');
         }
       } catch (error) {
+        console.error('Error initializing credits:', error);
         setCredits(FREE_CREDITS);
         setOperations([]);
         setMembershipType('free');
@@ -76,6 +82,18 @@ export const CreditsProvider = ({ children }) => {
     };
 
     initializeUserCredits();
+
+    // Set up periodic refresh for anonymous users
+    let refreshInterval;
+    if (!user) {
+      refreshInterval = setInterval(fetchAnonymousCredits, 60000); // Refresh every minute
+    }
+
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
   }, [user]);
 
   const deductCredits = async (amount, operationType) => {
@@ -116,6 +134,7 @@ export const CreditsProvider = ({ children }) => {
       }
       return true;
     } catch (error) {
+      console.error('Error deducting credits:', error);
       return false;
     }
   };
