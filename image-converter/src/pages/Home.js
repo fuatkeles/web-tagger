@@ -154,8 +154,17 @@ const Home = ({
       }
     }
 
-    if (await deductCredits(cost, 'geotag')) {
-      await originalHandleAddGeotag(index);
+    try {
+      if (await deductCredits(cost, 'geotag')) {
+        const headers = {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        };
+        await originalHandleAddGeotag(index, headers);
+      }
+    } catch (error) {
+      console.error('Error adding geotag:', error);
+      alert('Failed to add geotag. Please try again.');
     }
   };
 

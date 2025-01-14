@@ -32,10 +32,11 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  origin: ['https://www.exifquarter.com', 'https://exifquarter.com', process.env.FRONTEND_URL || 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 }));
 
 // File upload configuration
