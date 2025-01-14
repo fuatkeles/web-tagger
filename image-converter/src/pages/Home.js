@@ -25,6 +25,7 @@ const ImageListItem = ({
 }) => {
   const [name, setName] = useState(fileName.replace(/\.[^/.]+$/, ""));
   const [isConverted, setIsConverted] = useState(false);
+  const { deductCredits, getOperationCost } = useCredits();
 
   const handleNameChange = (e) => {
     const newName = e.target.value;
@@ -33,13 +34,16 @@ const ImageListItem = ({
     setIsConverted(true);
   };
 
-  const handleFormatChange = (format) => {
-    onFormatChange(format);
-    setIsConverted(true);
-  };
-
-  const handleDownload = async () => {
-    onDownload();
+  const handleFormatChange = async (format) => {
+    const cost = getOperationCost('format');
+    
+    if (await deductCredits(cost, 'format')) {
+      onFormatChange(format);
+      setIsConverted(true);
+    } else {
+      // If credit deduction fails, don't change the format
+      return;
+    }
   };
 
   // Update isConverted when convertedUrl or geotagged changes
@@ -97,7 +101,7 @@ const ImageListItem = ({
           )}
 
           <button 
-            onClick={handleDownload}
+            onClick={onDownload}
             className="download-button"
           >
             <FaCheckCircle />
@@ -222,13 +226,13 @@ const Home = ({
         <div className="credits-status">
           <div className="credits-count">
             <FaCoins />
-            {credits}
+            <span>{credits === null ? 'Loading...' : credits}</span>
           </div>
           {!user ? (
             <div className="credits-extra">
-              <span className="credits-reset">Resets daily</span>
+              <span className="credits-reset">Daily Free Credits</span>
               <button onClick={signInWithGoogle} className="credits-login">
-                <FaGoogle /> Login with Google
+                <FaGoogle /> Get More Credits
               </button>
             </div>
           ) : (
