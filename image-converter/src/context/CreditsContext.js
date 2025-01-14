@@ -7,7 +7,8 @@ import axios from 'axios';
 import config from '../config';
 
 const getApiUrl = (endpoint) => {
-  return `${config.apiUrl}/api${endpoint}`;
+  const isProduction = process.env.NODE_ENV === 'production';
+  return isProduction ? `${config.apiUrl}${endpoint}` : `${config.apiUrl}/api${endpoint}`;
 };
 
 const CreditsContext = createContext();
