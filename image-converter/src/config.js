@@ -6,7 +6,7 @@ const config = {
     refreshInterval: 60000, // 1 minute
   },
   production: {
-    apiUrl: 'https://exifquarter.com/api',
+    apiUrl: 'https://exifquarter.com',
     refreshInterval: 60000, // 1 minute
   }
 };
