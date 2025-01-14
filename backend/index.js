@@ -33,7 +33,7 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://exifquarter.com',
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
