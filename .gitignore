@@ -31,3 +31,6 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo 
+
+# Firebase credentials
+backend/web-tagger-5155b-firebase-adminsdk-pfiqv-85de7e0be7.json 
