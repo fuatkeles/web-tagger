@@ -9,6 +9,8 @@ import { useCredits } from '../context/CreditsContext';
 import { useNavigate } from 'react-router-dom';
 import CreditAlert from '../components/CreditAlert';
 
+const FREE_CREDITS = 15;
+
 const ImageListItem = ({ 
   image, 
   fileName, 
@@ -159,7 +161,7 @@ const Home = ({
   handleDownload
 }) => {
   const { user, signInWithGoogle, isPromotionActive } = useAuth();
-  const { credits, deductCredits, getOperationCost } = useCredits();
+  const { credits, getOperationCost, deductCredits } = useCredits();
   const navigate = useNavigate();
   const [showCreditAlert, setShowCreditAlert] = useState(false);
 
@@ -244,7 +246,7 @@ const Home = ({
         <div className="credits-status">
           <div className="credits-count">
             <FaCoins />
-            <span>{credits === null ? 'Loading...' : credits}</span>
+            <span>{credits}</span>
           </div>
           {!user ? (
             <div className="credits-extra">
