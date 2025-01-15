@@ -10,32 +10,24 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const xss = require('xss-clean');
 const hpp = require('hpp');
-const admin = require('firebase-admin');
 const config = require('./config');
 
 const app = express();
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  try {
-    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!serviceAccountBase64) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set');
+// In-memory credit storage with IP validation
+const creditStorage = new Map();
+const ipAttempts = new Map(); // Track suspicious IP behavior
+
+// Cleanup old entries every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of creditStorage) {
+    if (now - data.lastUsed > 24 * 60 * 60 * 1000) { // 24 hours
+      creditStorage.delete(ip);
+      ipAttempts.delete(ip);
     }
-    
-    const serviceAccount = JSON.parse(
-      Buffer.from(serviceAccountBase64, 'base64').toString('utf-8')
-    );
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-  } catch (error) {
-    console.error('Firebase initialization error:', error);
-    process.exit(1);
   }
-}
-const db = admin.firestore();
+}, 60 * 60 * 1000); // Every hour
 
 // Body parser middleware
 app.use(express.json({ limit: '100mb' }));
@@ -46,7 +38,14 @@ app.use(helmet());
 app.use(xss());
 app.use(hpp());
 
-// Rate limiting
+// Strict rate limiting for credit endpoints
+const creditLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later' }
+});
+
+// General rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
@@ -94,94 +93,130 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+// IP validation middleware
+const validateIP = (req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  
+  // Initialize or update IP attempts
+  if (!ipAttempts.has(clientIP)) {
+    ipAttempts.set(clientIP, {
+      count: 0,
+      firstAttempt: Date.now(),
+      blocked: false
+    });
+  }
+
+  const attempts = ipAttempts.get(clientIP);
+  const now = Date.now();
+
+  // Reset attempts after 1 hour
+  if (now - attempts.firstAttempt > 60 * 60 * 1000) {
+    attempts.count = 0;
+    attempts.firstAttempt = now;
+    attempts.blocked = false;
+  }
+
+  // Check if IP is blocked
+  if (attempts.blocked) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Increment attempt count
+  attempts.count++;
+
+  // Block IP if too many attempts
+  if (attempts.count > 1000) { // 1000 requests per hour
+    attempts.blocked = true;
+    return res.status(403).json({ error: 'Too many requests, access denied' });
+  }
+
+  next();
+};
+
 // Credit management middleware
-app.use(async (req, res, next) => {
-  try {
-    const clientIP = req.ip || req.connection.remoteAddress;
-    const docRef = db.collection('anonymous_credits').doc(clientIP);
-    const doc = await docRef.get();
-    const now = new Date().getTime();
+app.use('/api/credits', validateIP, (req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  let creditInfo = creditStorage.get(clientIP);
+  
+  if (!creditInfo) {
+    creditInfo = {
+      credits: 15,
+      lastUsed: now,
+      operations: []
+    };
+    creditStorage.set(clientIP, creditInfo);
+  } else {
+    const timeSinceLastUse = now - creditInfo.lastUsed;
     
-    if (!doc.exists) {
-      const creditInfo = {
+    if (timeSinceLastUse >= 24 * 60 * 60 * 1000) { // 24 hours
+      creditInfo = {
         credits: 15,
         lastUsed: now,
         operations: []
       };
-      await docRef.set(creditInfo);
-      req.ipCredits = creditInfo;
-    } else {
-      const creditInfo = doc.data();
-      const timeSinceLastUse = now - creditInfo.lastUsed;
-      
-      if (timeSinceLastUse >= 24 * 60 * 60 * 1000) {
-        const resetInfo = {
-          credits: 15,
-          lastUsed: now,
-          operations: []
-        };
-        await docRef.set(resetInfo);
-        req.ipCredits = resetInfo;
-      } else {
-        req.ipCredits = creditInfo;
-      }
+      creditStorage.set(clientIP, creditInfo);
     }
-    next();
-  } catch (error) {
-    console.error('Firestore error:', error);
-    next(error);
   }
+  
+  req.ipCredits = creditInfo;
+  next();
 });
 
-// Get credits endpoint
-app.get('/api/credits/anonymous', async (req, res) => {
-  try {
-    res.json({
-      credits: req.ipCredits.credits,
-      operations: req.ipCredits.operations
+// Get credits endpoint with rate limiting
+app.get('/api/credits/anonymous', creditLimiter, (req, res) => {
+  res.json({
+    credits: req.ipCredits.credits,
+    operations: req.ipCredits.operations
+  });
+});
+
+// Deduct credits endpoint with rate limiting
+app.post('/api/credits/anonymous/deduct', creditLimiter, (req, res) => {
+  const { amount, operationType } = req.body;
+  const clientIP = req.ip || req.connection.remoteAddress;
+  const creditInfo = req.ipCredits;
+
+  if (!creditInfo || creditInfo.credits < amount) {
+    return res.status(400).json({ 
+      error: 'Insufficient credits',
+      credits: creditInfo?.credits || 0
     });
-  } catch (error) {
-    console.error('Error getting credits:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
 
-// Deduct credits endpoint
-app.post('/api/credits/anonymous/deduct', async (req, res) => {
-  try {
-    const { amount, operationType } = req.body;
-    const clientIP = req.ip || req.connection.remoteAddress;
-    const creditInfo = req.ipCredits;
+  // Validate operation type and amount
+  if (!['geotag', 'format', 'download_all'].includes(operationType)) {
+    return res.status(400).json({ error: 'Invalid operation type' });
+  }
 
-    if (!creditInfo || creditInfo.credits < amount) {
-      return res.status(400).json({ 
-        error: 'Insufficient credits',
-        credits: creditInfo?.credits || 0
-      });
-    }
+  if (amount <= 0 || amount > 5) { // Maximum 5 credits per operation
+    return res.status(400).json({ error: 'Invalid credit amount' });
+  }
 
-    const newCredits = creditInfo.credits - amount;
-    const now = new Date().getTime();
-    const operations = [...creditInfo.operations, {
+  const newCredits = creditInfo.credits - amount;
+  const now = Date.now();
+  
+  // Keep only last 10 operations
+  const operations = [
+    ...creditInfo.operations.slice(-9),
+    {
       type: operationType,
       cost: amount,
       timestamp: new Date().toISOString()
-    }];
+    }
+  ];
 
-    await db.collection('anonymous_credits').doc(clientIP).update({
-      credits: newCredits,
-      lastUsed: now,
-      operations: operations
-    });
+  creditInfo.credits = newCredits;
+  creditInfo.lastUsed = now;
+  creditInfo.operations = operations;
 
-    res.json({
-      credits: newCredits,
-      operations: operations
-    });
-  } catch (error) {
-    console.error('Error deducting credits:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  creditStorage.set(clientIP, creditInfo);
+
+  res.json({
+    credits: newCredits,
+    operations: operations
+  });
 });
 
 app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, res, next) => {
