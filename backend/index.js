@@ -38,19 +38,15 @@ app.use(helmet());
 app.use(xss());
 app.use(hpp());
 
-// Strict rate limiting for credit endpoints
-const creditLimiter = rateLimit({
+// Strict rate limiting
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: { error: 'Too many requests, please try again later' }
 });
 
-// General rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
-});
-app.use(limiter);
+// Apply rate limiting to all routes
+app.use('/api/', apiLimiter);
 
 // CORS configuration
 app.use(cors({
@@ -164,59 +160,13 @@ app.use('/api/credits', validateIP, (req, res, next) => {
   next();
 });
 
-// Get credits endpoint with rate limiting
-app.get('/api/credits/anonymous', creditLimiter, (req, res) => {
-  res.json({
-    credits: req.ipCredits.credits,
-    operations: req.ipCredits.operations
-  });
+// Remove anonymous credit endpoints
+app.get('/api/credits/anonymous', (req, res) => {
+  res.status(404).json({ error: 'Endpoint removed' });
 });
 
-// Deduct credits endpoint with rate limiting
-app.post('/api/credits/anonymous/deduct', creditLimiter, (req, res) => {
-  const { amount, operationType } = req.body;
-  const clientIP = req.ip || req.connection.remoteAddress;
-  const creditInfo = req.ipCredits;
-
-  if (!creditInfo || creditInfo.credits < amount) {
-    return res.status(400).json({ 
-      error: 'Insufficient credits',
-      credits: creditInfo?.credits || 0
-    });
-  }
-
-  // Validate operation type and amount
-  if (!['geotag', 'format', 'download_all'].includes(operationType)) {
-    return res.status(400).json({ error: 'Invalid operation type' });
-  }
-
-  if (amount <= 0 || amount > 5) { // Maximum 5 credits per operation
-    return res.status(400).json({ error: 'Invalid credit amount' });
-  }
-
-  const newCredits = creditInfo.credits - amount;
-  const now = Date.now();
-  
-  // Keep only last 10 operations
-  const operations = [
-    ...creditInfo.operations.slice(-9),
-    {
-      type: operationType,
-      cost: amount,
-      timestamp: new Date().toISOString()
-    }
-  ];
-
-  creditInfo.credits = newCredits;
-  creditInfo.lastUsed = now;
-  creditInfo.operations = operations;
-
-  creditStorage.set(clientIP, creditInfo);
-
-  res.json({
-    credits: newCredits,
-    operations: operations
-  });
+app.post('/api/credits/anonymous/deduct', (req, res) => {
+  res.status(404).json({ error: 'Endpoint removed' });
 });
 
 app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, res, next) => {
