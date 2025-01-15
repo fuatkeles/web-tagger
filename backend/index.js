@@ -17,47 +17,76 @@ const app = express();
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
+  const serviceAccount = require('./web-tagger-5155b-firebase-adminsdk-pfiqv-dd1276922c.json');
   admin.initializeApp({
-    credential: admin.credential.applicationDefault()
+    credential: admin.credential.cert(serviceAccount)
   });
 }
 const db = admin.firestore();
 
-// Body parser middleware
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+// Enhanced Security Headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.google-analytics.com'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://www.google-analytics.com'],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Body parser middleware with size limits
+app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '10mb' }));
+app.use(express.urlencoded({ limit: process.env.MAX_FILE_SIZE || '10mb', extended: true }));
 
 // Security Middleware
-app.use(helmet());
 app.use(xss());
 app.use(hpp());
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: '*',
+  origin: config.frontendUrl,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400
 }));
 
-// File upload configuration
+// Secure file upload configuration
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024,
-    fieldSize: 100 * 1024 * 1024
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
+    fieldSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
+    files: 1
   },
   fileFilter: (req, file, cb) => {
+    // Only allow specific image types
     if (!file.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
       return cb(new Error('Only JPG, PNG & WebP files are allowed!'), false);
+    }
+    // Check file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+      return cb(new Error('Invalid file extension!'), false);
     }
     cb(null, true);
   }
@@ -100,7 +129,7 @@ app.use(async (req, res, next) => {
       const creditInfo = doc.data();
       const timeSinceLastUse = now - creditInfo.lastUsed;
       
-      if (timeSinceLastUse >= 24 * 60 * 60 * 1000) { // 24 hours
+      if (timeSinceLastUse >= 24 * 60 * 60 * 1000) {
         const resetInfo = {
           credits: 15,
           lastUsed: now,
