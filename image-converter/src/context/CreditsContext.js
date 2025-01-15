@@ -12,28 +12,23 @@ const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
 
 const getGuestCredits = () => {
-  const localCredits = localStorage.getItem('guestCredits');
-  const sessionId = sessionStorage.getItem('guestSessionId');
-  const browserCredits = sessionStorage.getItem('guestBrowserCredits');
-
-  // Eğer bu tarayıcı oturumu için daha önce kredi tanımlanmamışsa
-  if (!sessionId) {
-    const newSessionId = Date.now().toString();
-    sessionStorage.setItem('guestSessionId', newSessionId);
-    
-    // Eğer localStorage'da kredi varsa onu kullan, yoksa yeni kredi ver
-    if (localCredits) {
-      sessionStorage.setItem('guestBrowserCredits', localCredits);
-      return parseInt(localCredits);
-    } else {
-      localStorage.setItem('guestCredits', FREE_CREDITS.toString());
-      sessionStorage.setItem('guestBrowserCredits', FREE_CREDITS.toString());
-      return FREE_CREDITS;
-    }
+  const lastResetDate = localStorage.getItem('guestCreditsLastReset');
+  const currentDate = new Date().toDateString();
+  
+  // Günlük reset kontrolü
+  if (lastResetDate !== currentDate) {
+    localStorage.setItem('guestCredits', FREE_CREDITS.toString());
+    localStorage.setItem('guestCreditsLastReset', currentDate);
+    return FREE_CREDITS;
   }
 
-  // Mevcut oturum için kredi değerini döndür
-  return browserCredits ? parseInt(browserCredits) : parseInt(localCredits || FREE_CREDITS);
+  const localCredits = localStorage.getItem('guestCredits');
+  return localCredits ? parseInt(localCredits) : FREE_CREDITS;
+};
+
+const updateGuestCredits = (newAmount) => {
+  localStorage.setItem('guestCredits', newAmount.toString());
+  return newAmount;
 };
 
 const getGuestOperations = () => {
@@ -43,10 +38,18 @@ const getGuestOperations = () => {
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
-  const [credits, setCredits] = useState(() => user ? FREE_CREDITS : getGuestCredits());
-  const [operations, setOperations] = useState(() => user ? [] : getGuestOperations());
+  const [credits, setCredits] = useState(getGuestCredits());
+  const [operations, setOperations] = useState(getGuestOperations());
   const [membershipType, setMembershipType] = useState('free');
   const [loading, setLoading] = useState(true);
+
+  // Günlük kredi yenileme kontrolü
+  useEffect(() => {
+    if (!user) {
+      const newCredits = getGuestCredits();
+      setCredits(newCredits);
+    }
+  }, [user]);
 
   useEffect(() => {
     const initializeUserCredits = async () => {
@@ -56,7 +59,6 @@ export const CreditsProvider = ({ children }) => {
           const userDoc = await getDoc(userRef);
 
           if (!userDoc.exists()) {
-            // First time user, initialize credits
             const userData = {
               uid: user.uid,
               credits: REGISTERED_CREDITS,
@@ -74,7 +76,6 @@ export const CreditsProvider = ({ children }) => {
             setOperations([]);
             setMembershipType('free');
           } else {
-            // Existing user, load credits
             const userData = userDoc.data();
             setCredits(userData.credits);
             setOperations(userData.operations || []);
@@ -84,7 +85,8 @@ export const CreditsProvider = ({ children }) => {
       } catch (error) {
         console.error('Error initializing credits:', error);
         if (!user) {
-          setCredits(getGuestCredits());
+          const guestCredits = getGuestCredits();
+          setCredits(guestCredits);
           setOperations(getGuestOperations());
         }
         setMembershipType('free');
@@ -99,8 +101,7 @@ export const CreditsProvider = ({ children }) => {
   // Save guest credits and operations
   useEffect(() => {
     if (!user && !loading) {
-      localStorage.setItem('guestCredits', credits.toString());
-      sessionStorage.setItem('guestBrowserCredits', credits.toString());
+      updateGuestCredits(credits);
       localStorage.setItem('guestOperations', JSON.stringify(operations));
     }
   }, [credits, operations, user, loading]);
@@ -132,16 +133,17 @@ export const CreditsProvider = ({ children }) => {
           setOperations(prev => [...prev, newOperation]);
         }
       } else {
-        // Update local storage for non-logged users
+        // Update local storage for guest users
         const newOperation = {
           type: operationType,
           cost: amount,
           timestamp: new Date().toISOString()
         };
         
-        setCredits(prev => prev - amount);
+        const newCredits = credits - amount;
+        setCredits(newCredits);
+        updateGuestCredits(newCredits);
         setOperations(prev => [...prev, newOperation]);
-        return true;
       }
       return true;
     } catch (error) {
@@ -157,7 +159,6 @@ export const CreditsProvider = ({ children }) => {
       case 'format':
         return 1;
       case 'download_all':
-        // Charge 1 credit for bulk downloads of more than 3 files
         return fileCount > 3 ? 1 : 0;
       default:
         return 0;
