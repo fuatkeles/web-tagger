@@ -3,12 +3,6 @@ import { useAuth } from './AuthContext';
 import { db } from '../firebase/firebase';
 import { doc, getDoc, setDoc, updateDoc } from '@firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
-import axios from 'axios';
-import config from '../config';
-
-const getApiUrl = (endpoint) => {
-  return `${config.apiUrl}/api${endpoint}`;
-};
 
 const CreditsContext = createContext();
 
@@ -17,31 +11,42 @@ export const useCredits = () => useContext(CreditsContext);
 const FREE_CREDITS = 15;
 const REGISTERED_CREDITS = 50;
 
+const getGuestCredits = () => {
+  const localCredits = localStorage.getItem('guestCredits');
+  const sessionId = sessionStorage.getItem('guestSessionId');
+  const browserCredits = sessionStorage.getItem('guestBrowserCredits');
+
+  // Eğer bu tarayıcı oturumu için daha önce kredi tanımlanmamışsa
+  if (!sessionId) {
+    const newSessionId = Date.now().toString();
+    sessionStorage.setItem('guestSessionId', newSessionId);
+    
+    // Eğer localStorage'da kredi varsa onu kullan, yoksa yeni kredi ver
+    if (localCredits) {
+      sessionStorage.setItem('guestBrowserCredits', localCredits);
+      return parseInt(localCredits);
+    } else {
+      localStorage.setItem('guestCredits', FREE_CREDITS.toString());
+      sessionStorage.setItem('guestBrowserCredits', FREE_CREDITS.toString());
+      return FREE_CREDITS;
+    }
+  }
+
+  // Mevcut oturum için kredi değerini döndür
+  return browserCredits ? parseInt(browserCredits) : parseInt(localCredits || FREE_CREDITS);
+};
+
+const getGuestOperations = () => {
+  const localOperations = localStorage.getItem('guestOperations');
+  return localOperations ? JSON.parse(localOperations) : [];
+};
+
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
-  const [credits, setCredits] = useState(FREE_CREDITS);
-  const [operations, setOperations] = useState([]);
+  const [credits, setCredits] = useState(() => user ? FREE_CREDITS : getGuestCredits());
+  const [operations, setOperations] = useState(() => user ? [] : getGuestOperations());
   const [membershipType, setMembershipType] = useState('free');
   const [loading, setLoading] = useState(true);
-
-  // Function to fetch anonymous credits
-  const fetchAnonymousCredits = async () => {
-    try {
-      const response = await axios.get(getApiUrl('/credits/anonymous'));
-      if (response.data && typeof response.data.credits === 'number') {
-        setCredits(response.data.credits);
-        setOperations(response.data.operations || []);
-      } else {
-        console.error('Invalid credits data received:', response.data);
-        setCredits(FREE_CREDITS);
-        setOperations([]);
-      }
-    } catch (error) {
-      console.error('Error fetching anonymous credits:', error);
-      setCredits(FREE_CREDITS);
-      setOperations([]);
-    }
-  };
 
   useEffect(() => {
     const initializeUserCredits = async () => {
@@ -75,15 +80,13 @@ export const CreditsProvider = ({ children }) => {
             setOperations(userData.operations || []);
             setMembershipType(userData.membershipType || 'free');
           }
-        } else {
-          // Not logged in, get credits from backend API
-          await fetchAnonymousCredits();
-          setMembershipType('free');
         }
       } catch (error) {
         console.error('Error initializing credits:', error);
-        setCredits(FREE_CREDITS);
-        setOperations([]);
+        if (!user) {
+          setCredits(getGuestCredits());
+          setOperations(getGuestOperations());
+        }
         setMembershipType('free');
       } finally {
         setLoading(false);
@@ -91,19 +94,16 @@ export const CreditsProvider = ({ children }) => {
     };
 
     initializeUserCredits();
-
-    // Set up periodic refresh for anonymous users
-    let refreshInterval;
-    if (!user) {
-      refreshInterval = setInterval(fetchAnonymousCredits, config.refreshInterval);
-    }
-
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
   }, [user]);
+
+  // Save guest credits and operations
+  useEffect(() => {
+    if (!user && !loading) {
+      localStorage.setItem('guestCredits', credits.toString());
+      sessionStorage.setItem('guestBrowserCredits', credits.toString());
+      localStorage.setItem('guestOperations', JSON.stringify(operations));
+    }
+  }, [credits, operations, user, loading]);
 
   const deductCredits = async (amount, operationType) => {
     if (credits < amount) return false;
@@ -132,18 +132,16 @@ export const CreditsProvider = ({ children }) => {
           setOperations(prev => [...prev, newOperation]);
         }
       } else {
-        // Use backend API for non-logged users
-        const response = await axios.post(getApiUrl('/credits/anonymous/deduct'), {
-          amount,
-          operationType
-        });
+        // Update local storage for non-logged users
+        const newOperation = {
+          type: operationType,
+          cost: amount,
+          timestamp: new Date().toISOString()
+        };
         
-        if (response.data && typeof response.data.credits === 'number') {
-          setCredits(response.data.credits);
-          setOperations(response.data.operations || []);
-        } else {
-          throw new Error('Invalid response from credit deduction');
-        }
+        setCredits(prev => prev - amount);
+        setOperations(prev => [...prev, newOperation]);
+        return true;
       }
       return true;
     } catch (error) {
