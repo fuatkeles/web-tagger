@@ -17,87 +17,48 @@ const app = express();
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
+  const serviceAccount = require('./web-tagger-5155b-firebase-adminsdk-pfiqv-dd1276922c.json');
   admin.initializeApp({
-    credential: admin.credential.cert({
-      type: "service_account",
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
-      universe_domain: "googleapis.com"
-    })
+    credential: admin.credential.cert(serviceAccount)
   });
 }
 const db = admin.firestore();
 
-// Enhanced Security Headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.google-analytics.com'],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://www.google-analytics.com'],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-
-// Body parser middleware with size limits
-app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '10mb' }));
-app.use(express.urlencoded({ limit: process.env.MAX_FILE_SIZE || '10mb', extended: true }));
+// Body parser middleware
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Security Middleware
+app.use(helmet());
 app.use(xss());
 app.use(hpp());
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
 });
 app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400
 }));
 
-// Secure file upload configuration
+// File upload configuration
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
-    fieldSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
-    files: 1
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024,
+    fieldSize: 100 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    // Only allow specific image types
     if (!file.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
       return cb(new Error('Only JPG, PNG & WebP files are allowed!'), false);
-    }
-    // Check file extension
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
-      return cb(new Error('Invalid file extension!'), false);
     }
     cb(null, true);
   }
