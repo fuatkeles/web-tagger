@@ -17,10 +17,23 @@ const app = express();
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  const serviceAccount = require('./web-tagger-5155b-firebase-adminsdk-pfiqv-dd1276922c.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  try {
+    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountBase64) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set');
+    }
+    
+    const serviceAccount = JSON.parse(
+      Buffer.from(serviceAccountBase64, 'base64').toString('utf-8')
+    );
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+    process.exit(1);
+  }
 }
 const db = admin.firestore();
 
