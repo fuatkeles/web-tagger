@@ -2,13 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from '../firebase/firebase';
 import { doc, getDoc, setDoc, updateDoc } from '@firebase/firestore';
-import LoadingSpinner from '../components/LoadingSpinner';
-import axios from 'axios';
-import config from '../config';
-
-const getApiUrl = (endpoint) => {
-  return `${config.apiUrl}/api${endpoint}`;
-};
 
 const CreditsContext = createContext();
 
@@ -19,29 +12,22 @@ const REGISTERED_CREDITS = 50;
 
 export const CreditsProvider = ({ children }) => {
   const { user } = useAuth();
-  const [credits, setCredits] = useState(FREE_CREDITS);
-  const [operations, setOperations] = useState([]);
+  const [credits, setCredits] = useState(() => {
+    if (!user) {
+      const savedCredits = localStorage.getItem('guestCredits');
+      return savedCredits ? parseInt(savedCredits) : FREE_CREDITS;
+    }
+    return FREE_CREDITS;
+  });
+  const [operations, setOperations] = useState(() => {
+    if (!user) {
+      const savedOperations = localStorage.getItem('guestOperations');
+      return savedOperations ? JSON.parse(savedOperations) : [];
+    }
+    return [];
+  });
   const [membershipType, setMembershipType] = useState('free');
   const [loading, setLoading] = useState(true);
-
-  // Function to fetch anonymous credits
-  const fetchAnonymousCredits = async () => {
-    try {
-      const response = await axios.get(getApiUrl('/credits/anonymous'));
-      if (response.data && typeof response.data.credits === 'number') {
-        setCredits(response.data.credits);
-        setOperations(response.data.operations || []);
-      } else {
-        console.error('Invalid credits data received:', response.data);
-        setCredits(FREE_CREDITS);
-        setOperations([]);
-      }
-    } catch (error) {
-      console.error('Error fetching anonymous credits:', error);
-      setCredits(FREE_CREDITS);
-      setOperations([]);
-    }
-  };
 
   useEffect(() => {
     const initializeUserCredits = async () => {
@@ -76,14 +62,15 @@ export const CreditsProvider = ({ children }) => {
             setMembershipType(userData.membershipType || 'free');
           }
         } else {
-          // Not logged in, get credits from backend API
-          await fetchAnonymousCredits();
+          // Not logged in user
           setMembershipType('free');
         }
       } catch (error) {
         console.error('Error initializing credits:', error);
-        setCredits(FREE_CREDITS);
-        setOperations([]);
+        if (!user) {
+          setCredits(FREE_CREDITS);
+          setOperations([]);
+        }
         setMembershipType('free');
       } finally {
         setLoading(false);
@@ -91,19 +78,15 @@ export const CreditsProvider = ({ children }) => {
     };
 
     initializeUserCredits();
-
-    // Set up periodic refresh for anonymous users
-    let refreshInterval;
-    if (!user) {
-      refreshInterval = setInterval(fetchAnonymousCredits, config.refreshInterval);
-    }
-
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
   }, [user]);
+
+  // Save guest credits and operations to localStorage
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('guestCredits', credits.toString());
+      localStorage.setItem('guestOperations', JSON.stringify(operations));
+    }
+  }, [credits, operations, user]);
 
   const deductCredits = async (amount, operationType) => {
     if (credits < amount) return false;
@@ -132,18 +115,17 @@ export const CreditsProvider = ({ children }) => {
           setOperations(prev => [...prev, newOperation]);
         }
       } else {
-        // Use backend API for non-logged users
-        const response = await axios.post(getApiUrl('/credits/anonymous/deduct'), {
-          amount,
-          operationType
-        });
-        
-        if (response.data && typeof response.data.credits === 'number') {
-          setCredits(response.data.credits);
-          setOperations(response.data.operations || []);
-        } else {
-          throw new Error('Invalid response from credit deduction');
+        // Not logged in user
+        if (credits - amount >= 0) {
+          setCredits(prev => prev - amount);
+          setOperations(prev => [...prev, {
+            type: operationType,
+            cost: amount,
+            timestamp: new Date().toISOString()
+          }]);
+          return true;
         }
+        return false;
       }
       return true;
     } catch (error) {
@@ -152,33 +134,20 @@ export const CreditsProvider = ({ children }) => {
     }
   };
 
-  const getOperationCost = (operation, fileCount = 1) => {
-    switch (operation) {
-      case 'geotag':
-        return 1;
-      case 'format':
-        return 1;
-      case 'download_all':
-        // Charge 1 credit for bulk downloads of more than 3 files
-        return fileCount > 3 ? 1 : 0;
-      default:
-        return 0;
-    }
+  const value = {
+    credits,
+    operations,
+    membershipType,
+    deductCredits,
+    loading
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return null;
   }
 
   return (
-    <CreditsContext.Provider value={{
-      credits,
-      operations,
-      deductCredits,
-      getOperationCost,
-      membershipType,
-      maxCredits: user ? REGISTERED_CREDITS : FREE_CREDITS
-    }}>
+    <CreditsContext.Provider value={value}>
       {children}
     </CreditsContext.Provider>
   );

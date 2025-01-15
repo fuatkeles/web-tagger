@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaCoins, FaGoogle, FaHistory, FaSave, FaCloudDownloadAlt, FaRocket } from 'react-icons/fa';
+import { FaCoins, FaGoogle } from 'react-icons/fa';
 import './CreditAlert.css';
 
 const CreditAlert = ({ onClose, onLogin }) => {
@@ -19,42 +19,8 @@ const CreditAlert = ({ onClose, onLogin }) => {
           <FaCoins />
         </div>
         <h2>Credits Needed</h2>
-        <p>You've reached the free usage limit. Sign in to get more credits and access premium features!</p>
+        <p>You've run out of free credits. Sign in with Google to get 50 free credits and continue using the service!</p>
         
-        <div className="credit-alert-benefits">
-          <div className="benefit-item">
-            <FaHistory className="benefit-icon" />
-            <span className="benefit-title">50 Free Credits</span>
-            <span className="benefit-text">Start with free credits</span>
-          </div>
-          <div className="benefit-item">
-            <FaRocket className="benefit-icon" />
-            <span className="benefit-title">Fast Processing</span>
-            <span className="benefit-text">Lightning-fast conversions</span>
-          </div>
-          <div className="benefit-item">
-            <FaCloudDownloadAlt className="benefit-icon" />
-            <span className="benefit-title">Batch Process</span>
-            <span className="benefit-text">Convert multiple files</span>
-          </div>
-        </div>
-
-        <div className="credit-packages">
-          <h3>Available Packages</h3>
-          <div className="package-list">
-            <div className="package-item free">
-              <span className="package-name">Free</span>
-              <span className="package-credits">50 credits</span>
-              <span className="package-price">$0</span>
-            </div>
-            <div className="package-item premium">
-              <span className="package-name">Premium</span>
-              <span className="package-credits">350 credits</span>
-              <span className="package-price">$9.99</span>
-            </div>
-          </div>
-        </div>
-
         <div className="credit-alert-actions">
           <button className="login-button" onClick={handleGoogleSignIn}>
             <FaGoogle />
