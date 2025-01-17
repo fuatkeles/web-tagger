@@ -9,7 +9,10 @@ const config = {
   },
   production: {
     port: process.env.PORT || 5001,
-    frontendUrl: 'https://exifquarter.com'
+    frontendUrl: [
+      'https://exifquarter.com',
+      'https://www.exifquarter.com'
+    ]
   }
 };
 
