@@ -50,7 +50,7 @@ app.use('/api/', apiLimiter);
 
 // CORS configuration
 app.use(cors({
-  origin: '*',
+  origin: config.frontendUrl,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
