@@ -232,7 +232,7 @@ const Home = ({
           <div className="credits-status left">
             <div className="credits-count">
               <FaRocket className="rocket-icon" />
-              <span className="promo-count">EARN 4X!</span>
+              <span className="promo-count">EARN 20X!</span>
             </div>
             <div className="credits-extra">
               <span className="promotion-text">First 100 users get 200 credits! 🎉</span>

@@ -110,7 +110,11 @@ function App() {
 
     setImages(files);
     setFileNames(files.map(file => file.name.split('.')[0]));
-    setFileFormats(new Array(files.length).fill('webp'));
+    // Set initial format based on file extension
+    setFileFormats(files.map(file => {
+      const extension = file.name.split('.').pop().toLowerCase();
+      return ['jpg', 'jpeg', 'png', 'webp'].includes(extension) ? extension.replace('jpeg', 'jpg') : 'webp';
+    }));
     setLoading(new Array(files.length).fill(false));
     setGeotagged(new Array(files.length).fill(false));
     setConvertedImages(new Array(files.length).fill(null));
@@ -159,6 +163,11 @@ function App() {
 
     setImages(files);
     setFileNames(files.map(file => file.name.replace(/\.[^/.]+$/, "")));
+    // Set initial format based on file extension
+    setFileFormats(files.map(file => {
+      const extension = file.name.split('.').pop().toLowerCase();
+      return ['jpg', 'jpeg', 'png', 'webp'].includes(extension) ? extension.replace('jpeg', 'jpg') : 'webp';
+    }));
     setIsDragActive(false);
   };
 
@@ -292,49 +301,43 @@ function App() {
       let downloadUrl;
       let downloadBlob;
 
-      if (convertedImages[index]?.url) {
-        const response = await fetch(convertedImages[index].url);
-        if (!response.ok) {
-          throw new Error('Failed to fetch converted image');
-        }
-        downloadBlob = await response.blob();
-        downloadUrl = URL.createObjectURL(downloadBlob);
+      // Always convert if format has changed
+      const hasModifiedFormat = format !== image.name.split('.').pop().toLowerCase();
+      const hasModifiedName = cleanFileName !== image.name.split('.')[0];
+
+      if (!hasModifiedFormat && !hasModifiedName) {
+        downloadUrl = URL.createObjectURL(image);
       } else {
-        const hasModifiedFormat = format !== image.name.split('.').pop();
-        const hasModifiedName = cleanFileName !== image.name.split('.')[0];
+        const formData = new FormData();
+        formData.append('image', image);
+        formData.append('format', format);
+        formData.append('newFileName', fileName);
 
-        if (!hasModifiedFormat && !hasModifiedName) {
-          downloadUrl = URL.createObjectURL(image);
-        } else {
-          const formData = new FormData();
-          formData.append('image', image);
-          formData.append('format', format);
-          formData.append('newFileName', fileName);
+        const response = await axios.post(`${API_URL}/convert`, formData, {
+          responseType: 'blob',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 30000
+        });
 
-          const response = await axios.post(`${API_URL}/convert`, formData, {
-            responseType: 'blob',
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-            timeout: 30000 // 30 second timeout
-          });
+        downloadBlob = new Blob([response.data], { type: `image/${format}` });
+        downloadUrl = URL.createObjectURL(downloadBlob);
 
-          downloadBlob = new Blob([response.data], { type: `image/${format}` });
-          downloadUrl = URL.createObjectURL(downloadBlob);
-
-          // Store the converted version
-          if (convertedImages[index]?.url) {
-            URL.revokeObjectURL(convertedImages[index].url);
-          }
-          setConvertedImages(prev => ({
-            ...prev,
-            [index]: {
-              url: downloadUrl,
-              format,
-              modified: true
-            }
-          }));
+        // Cleanup previous URL if exists
+        if (convertedImages[index]?.url) {
+          URL.revokeObjectURL(convertedImages[index].url);
         }
+
+        // Store the converted version
+        setConvertedImages(prev => ({
+          ...prev,
+          [index]: {
+            url: downloadUrl,
+            format,
+            modified: true
+          }
+        }));
       }
 
       // Download the file
@@ -345,8 +348,8 @@ function App() {
       link.click();
       document.body.removeChild(link);
 
-      // Cleanup if it's a temporary URL
-      if (!convertedImages[index]?.url || downloadUrl !== convertedImages[index].url) {
+      // Cleanup temporary URL if not stored in convertedImages
+      if (!hasModifiedFormat && !hasModifiedName) {
         URL.revokeObjectURL(downloadUrl);
       }
     } catch (error) {
