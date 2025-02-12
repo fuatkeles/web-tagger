@@ -9,7 +9,7 @@ import { useCredits } from '../context/CreditsContext';
 import { useNavigate } from 'react-router-dom';
 import CreditAlert from '../components/CreditAlert';
 
-const FREE_CREDITS = 15;
+const FREE_CREDITS = 10;
 
 const ImageListItem = ({ 
   image, 
