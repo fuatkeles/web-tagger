@@ -8,7 +8,7 @@ const CreditsContext = createContext();
 
 export const useCredits = () => useContext(CreditsContext);
 
-const FREE_CREDITS = 15;
+const FREE_CREDITS = 10;
 const REGISTERED_CREDITS = 50;
 
 const getGuestCredits = () => {
