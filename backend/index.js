@@ -50,7 +50,9 @@ app.use('/api/', apiLimiter);
 
 // CORS configuration
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: process.env.NODE_ENV === 'production' 
+    ? config.frontendUrl 
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -65,7 +67,8 @@ const upload = multer({
     fieldSize: 100 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
+    // Allow both image/jpeg and image/jpg MIME types
+    if (!file.mimetype.match(/^image\/(jpe?g|png|webp)$/)) {
       return cb(new Error('Only JPG, PNG & WebP files are allowed!'), false);
     }
     cb(null, true);
@@ -74,18 +77,68 @@ const upload = multer({
 
 // Input validation middleware
 const validateImageInput = [
-  body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Invalid latitude'),
-  body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
-  body('format').optional().isIn(['webp', 'png', 'jpg']).withMessage('Invalid format'),
-  body('newFileName').optional().trim().escape()
+  (req, res, next) => {
+    // Get values from either body or FormData
+    const latitude = req.body.latitude || req.file?.latitude;
+    const longitude = req.body.longitude || req.file?.longitude;
+    
+    // Convert to float and validate
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    // Validate latitude
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      return res.status(400).json({ errors: [{ msg: 'Invalid latitude value: ' + latitude }] });
+    }
+    
+    // Validate longitude
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      return res.status(400).json({ errors: [{ msg: 'Invalid longitude value: ' + longitude }] });
+    }
+    
+    // Store parsed values
+    req.geoData = {
+      latitude: lat,
+      longitude: lng
+    };
+    
+    // Validate format if provided
+    const format = (req.body.format || req.file?.format || '').toLowerCase();
+    if (format && !['webp', 'png', 'jpg', 'jpeg'].includes(format)) {
+      return res.status(400).json({ errors: [{ msg: 'Invalid format' }] });
+    }
+    
+    next();
+  }
 ];
 
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Detailed error:', err);
+  console.error('Error stack:', err.stack);
+  
+  // Handle specific error types
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      status: 'error',
+      message: 'File upload error: ' + err.message
+    });
+  }
+
+  if (err.message.includes('Only JPG, PNG & WebP files are allowed')) {
+    return res.status(400).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+
+  // Default error response
   res.status(500).json({
     status: 'error',
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Internal server error' 
+      : err.message,
+    details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
   });
 };
 
@@ -171,63 +224,72 @@ app.post('/api/credits/anonymous/deduct', (req, res) => {
 
 app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, res, next) => {
   try {
-    // Validate input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { latitude, longitude, format = 'webp' } = req.body;
-    const newFileName = req.body.newFileName?.replace(/\s+/g, '-') || 'geotagged';
-    
-    // Get clean filename without extension and hyphens for metadata
-    const cleanFileName = newFileName
-      .replace(/\.[^/.]+$/, '')        // remove extension
-      .replace(/-/g, ' ');             // replace hyphens with spaces
-
     if (!req.file) {
       throw new Error('No image file received');
     }
 
-    // First convert the image to the desired format
-    let processedImage;
-    switch (format.toLowerCase()) {
-      case 'png':
-        processedImage = await sharp(req.file.buffer).png();
-        break;
-      case 'jpg':
-      case 'jpeg':
-        processedImage = await sharp(req.file.buffer).jpeg();
-        break;
-      case 'webp':
-      default:
-        processedImage = await sharp(req.file.buffer).webp();
-        break;
-    }
-
-    const outputBuffer = await processedImage.toBuffer();
+    const { latitude, longitude } = req.geoData;
+    let format = (req.body.format || req.file.originalname.split('.').pop()).toLowerCase();
+    // Normalize jpg/jpeg format
+    format = format === 'jpg' ? 'jpeg' : format;
+    const newFileName = (req.body.newFileName || 'geotagged').replace(/\s+/g, '-');
     const tempFilePath = path.join(__dirname, `temp-${Date.now()}-${newFileName}.${format}`);
-    
-    // Write the processed image to a temporary file
-    await fs.writeFile(tempFilePath, outputBuffer);
 
     try {
-      // Add geotag data
-      await exiftool.write(tempFilePath, {
-        GPSLatitude: parseFloat(latitude),
-        GPSLongitude: parseFloat(longitude),
-        GPSLatitudeRef: parseFloat(latitude) >= 0 ? 'N' : 'S',
-        GPSLongitudeRef: parseFloat(longitude) >= 0 ? 'E' : 'W',
-        GPSVersionID: '2.3.0.0',
+      // First convert the image to the desired format
+      let processedImage;
+      switch (format.toLowerCase()) {
+        case 'png':
+          processedImage = await sharp(req.file.buffer).png();
+          break;
+        case 'jpg':
+        case 'jpeg':
+          processedImage = await sharp(req.file.buffer).jpeg();
+          break;
+        case 'webp':
+        default:
+          processedImage = await sharp(req.file.buffer).webp();
+          break;
+      }
+
+      const outputBuffer = await processedImage.toBuffer();
+
+      // Write the processed file
+      await fs.writeFile(tempFilePath, outputBuffer);
+
+      // Convert coordinates to EXIF format
+      const latAbs = Math.abs(latitude);
+      const latDeg = Math.floor(latAbs);
+      const latMin = Math.floor((latAbs - latDeg) * 60);
+      const latSec = ((latAbs - latDeg - latMin / 60) * 3600).toFixed(2);
+
+      const lonAbs = Math.abs(longitude);
+      const lonDeg = Math.floor(lonAbs);
+      const lonMin = Math.floor((lonAbs - lonDeg) * 60);
+      const lonSec = ((lonAbs - lonDeg - lonMin / 60) * 3600).toFixed(2);
+
+      // Write GPS data
+      const exifData = {
+        GPSVersionID: [2, 2, 0, 0],
+        GPSLatitudeRef: latitude >= 0 ? 'N' : 'S',
+        GPSLatitude: [latDeg, latMin, latSec],
+        GPSLongitudeRef: longitude >= 0 ? 'E' : 'W',
+        GPSLongitude: [lonDeg, lonMin, lonSec],
         GPSMapDatum: 'WGS-84',
-        Software: 'Exif Quarter',
-        ImageDescription: cleanFileName,
-        Keywords: cleanFileName
-      }, ['-overwrite_original']);
+        GPSDateStamp: new Date().toISOString().split('T')[0].replace(/-/g, ':'),
+        GPSTimeStamp: new Date().toISOString().split('T')[1].split('.')[0],
+        GPSStatus: 'A'
+      };
 
-      // Read the geotagged file
+      // Write EXIF data
+      await exiftool.write(tempFilePath, exifData, ['-overwrite_original']);
+
+      // Read back and verify
+      const info = await exiftool.read(tempFilePath);
+      console.log('Written EXIF:', info);
+
+      // Send the file
       const finalBuffer = await fs.readFile(tempFilePath);
-
       const mimeTypes = {
         'png': 'image/png',
         'jpg': 'image/jpeg',
@@ -235,20 +297,21 @@ app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, 
         'webp': 'image/webp'
       };
 
-      // Set response headers
+      const contentType = mimeTypes[format.toLowerCase()] || 'image/webp';
+      const downloadFormat = format === 'jpeg' ? 'jpg' : format;
+      
       res.set({
-        'Content-Type': mimeTypes[format.toLowerCase()] || 'image/webp',
-        'Content-Disposition': `attachment; filename="${newFileName}.${format}"`,
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${newFileName}.${downloadFormat}"`,
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
       });
-      
       res.send(finalBuffer);
 
     } finally {
-      // Clean up temp file
+      // Clean up
       try {
         await fs.unlink(tempFilePath);
       } catch (err) {
@@ -257,7 +320,7 @@ app.post('/add-geotag', upload.single('image'), validateImageInput, async (req, 
     }
 
   } catch (error) {
-    console.error('Detailed error:', error);
+    console.error('Error:', error);
     next(error);
   }
 });
@@ -268,7 +331,9 @@ app.post('/convert', upload.single('image'), async (req, res, next) => {
       throw new Error('No image file received');
     }
 
-    const format = req.body.format || 'webp';
+    let format = req.body.format || 'webp';
+    // Normalize jpg/jpeg format
+    format = format.toLowerCase() === 'jpg' ? 'jpeg' : format.toLowerCase();
     const newFileName = req.body.newFileName?.replace(/\s+/g, '-') || `converted.${format}`;
 
     // First convert the image to the desired format
@@ -311,9 +376,12 @@ app.post('/convert', upload.single('image'), async (req, res, next) => {
         'webp': 'image/webp'
       };
       
+      const contentType = mimeTypes[format.toLowerCase()] || 'image/webp';
+      const downloadFormat = format === 'jpeg' ? 'jpg' : format;
+      
       res.set({
-        'Content-Type': mimeTypes[format.toLowerCase()] || 'image/webp',
-        'Content-Disposition': `attachment; filename="${newFileName}"`,
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${newFileName.replace(/\.[^/.]+$/, '')}.${downloadFormat}"`,
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',

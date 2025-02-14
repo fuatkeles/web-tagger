@@ -16,8 +16,8 @@ const ImageListItem = ({
   fileName, 
   onFileNameChange, 
   onFormatChange,
-  onAddGeotag,
   loading,
+  setLoading,
   geotagged,
   location,
   onRemove,
@@ -25,7 +25,10 @@ const ImageListItem = ({
   convertedUrl,
   onDownload,
   showCreditAlert,
-  setShowCreditAlert
+  setShowCreditAlert,
+  index,
+  setConvertedImages,
+  setGeotagged
 }) => {
   const [name, setName] = useState(fileName.replace(/\.[^/.]+$/, ""));
   const [isConverted, setIsConverted] = useState(false);
@@ -73,6 +76,74 @@ const ImageListItem = ({
     }
   }, [convertedUrl, geotagged]);
 
+  const handleAddGeotagWithCredits = async () => {
+    const cost = getOperationCost('geotag');
+    
+    if (credits < cost) {
+      if (!user) {
+        setShowCreditAlert(true);
+        return;
+      } else {
+        alert('Insufficient credits. Please wait for credit renewal.');
+        return;
+      }
+    }
+
+    if (!location) {
+      alert('Please select a location on the map first');
+      return;
+    }
+
+    try {
+      if (await deductCredits(cost, 'geotag')) {
+        // Set loading state for this image
+        setLoading(prev => ({ ...prev, [index]: true }));
+
+        const formData = new FormData();
+        formData.append('image', image);
+        formData.append('latitude', location.lat.toString());
+        formData.append('longitude', location.lng.toString());
+        formData.append('format', selectedFormat || 'webp');
+        formData.append('newFileName', name);
+
+        // Log FormData contents for debugging
+        for (let pair of formData.entries()) {
+          console.log('FormData:', pair[0], pair[1]);
+        }
+
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/add-geotag`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        // Log the full response for debugging
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Server error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        
+        // Update states directly
+        setConvertedImages(prev => ({ ...prev, [index]: { url } }));
+        setGeotagged(prev => ({ ...prev, [index]: true }));
+        setIsConverted(true);
+      }
+    } catch (error) {
+      console.error('Detailed error:', error);
+      console.error('Error stack:', error.stack);
+      alert(`Failed to add geotag: ${error.message}`);
+    } finally {
+      // Reset loading state
+      setLoading(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
   return (
     <div className="image-list-item">
       <div className="image-preview">
@@ -103,7 +174,7 @@ const ImageListItem = ({
           {location && (
             <button 
               className="geotag-button"
-              onClick={onAddGeotag}
+              onClick={handleAddGeotagWithCredits}
               disabled={loading}
             >
               {loading ? (
@@ -149,8 +220,11 @@ const Home = ({
   fileNames,
   handleFileNameChange,
   loading,
+  setLoading,
   geotagged,
   convertedImages,
+  setConvertedImages,
+  setGeotagged,
   handleClear,
   handleDownloadAll: originalHandleDownloadAll,
   handleClearAll,
@@ -164,33 +238,6 @@ const Home = ({
   const { credits, getOperationCost, deductCredits } = useCredits();
   const navigate = useNavigate();
   const [showCreditAlert, setShowCreditAlert] = useState(false);
-
-  const handleAddGeotagWithCredits = async (index) => {
-    const cost = getOperationCost('geotag');
-    
-    if (credits < cost) {
-      if (!user) {
-        setShowCreditAlert(true);
-        return;
-      } else {
-        alert('Insufficient credits. Please wait for credit renewal.');
-        return;
-      }
-    }
-
-    try {
-      if (await deductCredits(cost, 'geotag')) {
-        const headers = {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        };
-        await originalHandleAddGeotag(index, headers);
-      }
-    } catch (error) {
-      console.error('Error adding geotag:', error);
-      alert('Failed to add geotag. Please try again.');
-    }
-  };
 
   const handleDownloadWithCredits = async (index) => {
     // Single file download is free
@@ -316,12 +363,13 @@ const Home = ({
                 {images.map((image, index) => (
                   <ImageListItem 
                     key={index}
+                    index={index}
                     image={image}
                     fileName={image.name}
                     onFileNameChange={(newName) => handleFileNameChange(index, newName)}
                     onFormatChange={(format) => handleFormatChange(index, format)}
-                    onAddGeotag={() => handleAddGeotagWithCredits(index)}
                     loading={loading[index]}
+                    setLoading={setLoading}
                     geotagged={geotagged[index]}
                     location={location}
                     onRemove={() => handleClear(index)}
@@ -330,6 +378,8 @@ const Home = ({
                     onDownload={() => handleDownloadWithCredits(index)}
                     showCreditAlert={showCreditAlert}
                     setShowCreditAlert={setShowCreditAlert}
+                    setConvertedImages={setConvertedImages}
+                    setGeotagged={setGeotagged}
                   />
                 ))}
               </div>
