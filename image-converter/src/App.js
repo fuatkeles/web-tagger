@@ -22,6 +22,7 @@ import { AuthProvider } from './context/AuthContext';
 import Dashboard from './components/Dashboard';
 import { CreditsProvider } from './context/CreditsContext';
 import Pricing from './pages/Pricing';
+import CMPBanner from './components/CMPBanner';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
@@ -514,11 +515,12 @@ function App() {
   }, [images]);
 
   return (
-    <Router>
-      <ThemeProvider>
-        <AuthProvider>
-          <CreditsProvider>
-            <div className="app">
+    <ThemeProvider>
+      <AuthProvider>
+        <CreditsProvider>
+          <Router>
+            <div className="App">
+              <CMPBanner />
               <Navbar />
               <Routes>
                 <Route 
@@ -553,15 +555,15 @@ function App() {
                   } 
                 />
                 <Route path="/about" element={<About />} />
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/dashboard" element={<Dashboard />} />
               </Routes>
               <Footer />
             </div>
-          </CreditsProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </Router>
+          </Router>
+        </CreditsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
