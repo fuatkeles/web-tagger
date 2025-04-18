@@ -9,9 +9,6 @@ import PayAsYouGo from './PayAsYouGo';
 
 const PricingCard = ({ plan, price, credits, period, features, popular, lifetime }) => (
   <div className={`pricing-card ${popular ? 'popular' : ''} ${lifetime ? 'lifetime' : ''}`}>
-    <div className="coming-soon-overlay">
-      <span>Coming Soon</span>
-    </div>
     {popular && <div className="popular-badge">Most Popular</div>}
     {lifetime && <div className="lifetime-badge">Best Value</div>}
     <h3 className="plan-name">{plan}</h3>
@@ -28,18 +25,12 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
       {features.map((feature, index) => (
         <li key={index}>
           <FaCheck className="feature-check" />
-          {feature.includes('API') ? (
-            <span>
-              {feature} <span className="coming-soon-text">(Coming Soon)</span>
-            </span>
-          ) : (
-            feature
-          )}
+          {feature}
         </li>
       ))}
     </ul>
-    <button className="select-plan-btn" disabled>
-      Coming Soon
+    <button className="select-plan-btn">
+      Select Plan
     </button>
   </div>
 );
@@ -94,13 +85,8 @@ const Dashboard = () => {
 
       <div className="dashboard-content">
         <div className="pricing-sections-container">
-          <div className="pricing-overlay">
-            <div className="coming-soon-text">
-              <span>Coming Soon</span>
-            </div>
-          </div>
           <div className="pricing-section">
-            <h2>Pricing Plans <span className="coming-soon-text">(Coming Soon)</span></h2>
+            <h2>Pricing Plans</h2>
             <div className="launch-announcement">
               <h3>🚀 Special Launch Offer!</h3>
               <p>First 100 users who sign up will receive 200 credits instead of 50 credits!</p>
