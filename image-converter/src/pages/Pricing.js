@@ -18,11 +18,20 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
 
   return (
     <div className={`pricing-card ${popular ? 'popular' : ''} ${lifetime ? 'lifetime' : ''}`}>
-      <div className="coming-soon-overlay">
-        <span>Coming Soon</span>
-      </div>
-      {popular && <div className="popular-badge">Most Popular</div>}
-      {lifetime && <div className="lifetime-badge">Best Value</div>}
+      {popular && (
+        <div className="popular-badge">
+          <span className="badge-icon">⭐</span>
+          <span className="badge-text">Most Popular</span>
+          <div className="badge-shine"></div>
+        </div>
+      )}
+      {lifetime && (
+        <div className="lifetime-badge">
+          <span className="badge-icon">💎</span>
+          <span className="badge-text">Best Value</span>
+          <div className="badge-shine"></div>
+        </div>
+      )}
       <h3 className="plan-name">{plan}</h3>
       <div className="plan-price">
         <span className="currency">$</span>
@@ -37,18 +46,12 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
         {features.map((feature, index) => (
           <li key={index}>
             <FaCheck className="feature-check" />
-            {feature.includes('API') ? (
-              <span>
-                {feature} <span className="coming-soon-text">(Coming Soon)</span>
-              </span>
-            ) : (
-              feature
-            )}
+            {feature}
           </li>
         ))}
       </ul>
-      <button className="select-plan-btn" onClick={handleClick} disabled>
-        Coming Soon
+      <button className="select-plan-btn" onClick={handleClick}>
+        Select Plan
       </button>
     </div>
   );
@@ -83,12 +86,6 @@ const Pricing = () => {
   return (
     <div className="pricing-container">
       <div className="pricing-page">
-        <div className="pricing-page-overlay">
-          <div className="coming-soon-text">
-            <span>Coming Soon</span>
-          </div>
-        </div>
-        
         <div className="pricing-hero">
           <h1>Choose the Perfect Plan</h1>
           <p>Transform your images with powerful conversion and geotagging features</p>
@@ -115,13 +112,10 @@ const Pricing = () => {
         </div>
 
         <div className="api-tiers">
-          <h2>API Access Tiers <span className="coming-soon-text">(Coming Soon)</span></h2>
+          <h2>API Access Tiers</h2>
           <div className="api-tiers-grid">
             {apiTiers.map((tier, index) => (
               <div key={index} className="api-tier">
-                <div className="coming-soon-overlay">
-                  <span>Coming Soon</span>
-                </div>
                 <h3>{tier.title}</h3>
                 <p>{tier.description}</p>
                 <ul>
