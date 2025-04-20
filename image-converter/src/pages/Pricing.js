@@ -2,17 +2,31 @@ import React from 'react';
 import { FaCoins, FaCheck, FaMapMarkerAlt, FaImage, FaCloud, FaRocket, FaCode } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useStripe } from '../context/StripeContext';
 import './Pricing.css';
 import pricingData from '../data/pricing.json';
 import PayAsYouGo from '../components/PayAsYouGo';
 
-const PricingCard = ({ plan, price, credits, period, features, popular, lifetime }) => {
+const PricingCard = ({ plan, price, credits, period, features, popular, lifetime, priceId }) => {
   const { user, signInWithGoogle } = useAuth();
+  const { initiateCheckout } = useStripe();
   const navigate = useNavigate();
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!user) {
-      signInWithGoogle();
+      await signInWithGoogle();
+      return;
+    }
+
+    try {
+      if (!priceId) {
+        console.error('No priceId provided for plan:', plan);
+        return;
+      }
+      await initiateCheckout(priceId, user.uid);
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      // You might want to show an error message to the user
     }
   };
 

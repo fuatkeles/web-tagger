@@ -23,6 +23,7 @@ import Dashboard from './components/Dashboard';
 import { CreditsProvider } from './context/CreditsContext';
 import Pricing from './pages/Pricing';
 import CMPBanner from './components/CMPBanner';
+import { StripeProvider } from './context/StripeContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
@@ -517,51 +518,53 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CreditsProvider>
-          <Router>
-            <div className="App">
-              <CMPBanner />
-              <Navbar />
-              <Routes>
-                <Route 
-                  path="/" 
-                  element={
-                    <Home 
-                      location={location}
-                      setLocation={setLocation}
-                      isDragActive={isDragActive}
-                      handleDragOver={handleDragOver}
-                      handleDragLeave={handleDragLeave}
-                      handleDrop={handleDrop}
-                      handleFileChange={handleFileChange}
-                      images={images}
-                      fileNames={fileNames}
-                      handleFileNameChange={handleFileNameChange}
-                      loading={loading}
-                      setLoading={setLoading}
-                      geotagged={geotagged}
-                      convertedImages={convertedImages}
-                      setConvertedImages={setConvertedImages}
-                      setGeotagged={setGeotagged}
-                      handleClear={handleClear}
-                      handleDownloadAll={handleDownloadAll}
-                      handleClearAll={handleClearAll}
-                      allConvertedAndGeotagged={allConvertedAndGeotagged}
-                      fileFormats={fileFormats}
-                      handleFormatChange={handleFormatChange}
-                      handleAddGeotag={handleAddGeotag}
-                      handleDownload={handleDownload}
-                    />
-                  } 
-                />
-                <Route path="/about" element={<About />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-              </Routes>
-              <Footer />
-            </div>
-          </Router>
-        </CreditsProvider>
+        <StripeProvider>
+          <CreditsProvider>
+            <Router>
+              <div className="App">
+                <CMPBanner />
+                <Navbar />
+                <Routes>
+                  <Route 
+                    path="/" 
+                    element={
+                      <Home 
+                        location={location}
+                        setLocation={setLocation}
+                        isDragActive={isDragActive}
+                        handleDragOver={handleDragOver}
+                        handleDragLeave={handleDragLeave}
+                        handleDrop={handleDrop}
+                        handleFileChange={handleFileChange}
+                        images={images}
+                        fileNames={fileNames}
+                        handleFileNameChange={handleFileNameChange}
+                        loading={loading}
+                        setLoading={setLoading}
+                        geotagged={geotagged}
+                        convertedImages={convertedImages}
+                        setConvertedImages={setConvertedImages}
+                        setGeotagged={setGeotagged}
+                        handleClear={handleClear}
+                        handleDownloadAll={handleDownloadAll}
+                        handleClearAll={handleClearAll}
+                        allConvertedAndGeotagged={allConvertedAndGeotagged}
+                        fileFormats={fileFormats}
+                        handleFormatChange={handleFormatChange}
+                        handleAddGeotag={handleAddGeotag}
+                        handleDownload={handleDownload}
+                      />
+                    } 
+                  />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                </Routes>
+                <Footer />
+              </div>
+            </Router>
+          </CreditsProvider>
+        </StripeProvider>
       </AuthProvider>
     </ThemeProvider>
   );

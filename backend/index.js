@@ -12,6 +12,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const config = require('./config');
 const apiRoutes = require('./routes/api');
+const stripeRoutes = require('./routes/stripe');
 
 const app = express();
 
@@ -392,6 +393,9 @@ app.post('/convert', upload.single('image'), async (req, res, next) => {
 
 // API v1 routes
 app.use('/v1', apiRoutes);
+
+// Use Stripe routes
+app.use('/api/stripe', stripeRoutes);
 
 // Error handler should be last
 app.use(errorHandler);

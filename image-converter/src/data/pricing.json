@@ -8,7 +8,8 @@
       "features": [
         "Image format conversion",
         "Geolocation tagging"
-      ]
+      ],
+      "priceId": "price_1RG5tbEXA1ekXbv66jikwON9"
     },
     {
       "plan": "Pro",
@@ -19,7 +20,8 @@
         "All Basic features",
         "Pro API"
       ],
-      "popular": true
+      "popular": true,
+      "priceId": "price_1RG5u4EXA1ekXbv6K7SZAZaL"
     },
     {
       "plan": "Business",
@@ -29,7 +31,8 @@
       "features": [
         "All Pro features",
         "Business API"
-      ]
+      ],
+      "priceId": "price_1RG5uPEXA1ekXbv6iEV5pp8Z"
     },
     {
       "plan": "Lifetime",
@@ -41,7 +44,8 @@
         "Never expires",
         "Enterprise API"
       ],
-      "lifetime": true
+      "lifetime": true,
+      "priceId": "price_1RG5v2EXA1ekXbv62TSEAbVX"
     }
   ],
   "features": [
