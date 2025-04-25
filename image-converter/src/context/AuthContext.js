@@ -13,7 +13,8 @@ import {
   getFirestore,
   onSnapshot,
   runTransaction,
-  increment 
+  increment,
+  updateDoc
 } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../firebase/firebase';
 import { onAuthStateChanged } from '@firebase/auth';
@@ -68,87 +69,66 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userRef);
-
-          if (!userDoc.exists()) {
-            try {
-              await runTransaction(db, async (transaction) => {
-                const promotionRef = doc(db, 'promotion', 'firstUsers');
-                const promotionDoc = await transaction.get(promotionRef);
-                
-                if (!promotionDoc.exists()) {
-                  throw "Promotion document doesn't exist";
-                }
-
-                const { userCount, isActive, maxUsers } = promotionDoc.data();
-                const isEligible = isActive && userCount < maxUsers;
-                const startingCredits = isEligible ? 200 : 50;
-
-                if (isEligible) {
-                  transaction.update(promotionRef, {
-                    userCount: increment(1),
-                    isActive: userCount + 1 < maxUsers
-                  });
-                }
-
-                transaction.set(userRef, {
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  photoURL: user.photoURL,
-                  membershipType: 'free',
-                  credits: startingCredits,
-                  operations: [],
-                  createdAt: new Date().toISOString(),
-                  lastUpdated: new Date().toISOString(),
-                  promotionApplied: isEligible
-                });
-              });
-            } catch (error) {
-              await setDoc(userRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                membershipType: 'free',
-                credits: 50,
-                operations: [],
-                createdAt: new Date().toISOString(),
-                lastUpdated: new Date().toISOString(),
-                promotionApplied: false
-              });
-            }
-          }
-        } catch (error) {
-          // Handle error silently
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          setUser({ ...user, ...userDoc.data() });
+        } else {
+          // Create new user document
+          await setDoc(doc(db, 'users', user.uid), {
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            credits: 0,
+            subscriptionStatus: 'inactive',
+            lastPurchaseDate: null,
+            currentPlan: null
+          });
+          setUser({ ...user, credits: 0, subscriptionStatus: 'inactive' });
         }
+      } else {
+        setUser(null);
       }
-      setUser(user);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      return result.user;
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+  };
+
+  const refreshUserData = async () => {
+    if (user) {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        setUser({ ...user, ...userDoc.data() });
+      }
+    }
+  };
+
   const value = {
     user,
-    signInWithGoogle: async () => {
-      try {
-        await signInWithPopup(auth, googleProvider);
-      } catch (error) {
-        // Handle error silently
-      }
-    },
-    signOut: async () => {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        // Handle error silently
-      }
-    },
-    isPromotionActive
+    signInWithGoogle,
+    logout,
+    isPromotionActive,
+    refreshUserData
   };
 
   return (

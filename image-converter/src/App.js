@@ -519,51 +519,51 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <StripeProvider>
-          <CreditsProvider>
-            <Router>
-              <div className="App">
-                <CMPBanner />
-                <Navbar />
-                <Routes>
-                  <Route 
-                    path="/" 
-                    element={
-                      <Home 
-                        location={location}
-                        setLocation={setLocation}
-                        isDragActive={isDragActive}
-                        handleDragOver={handleDragOver}
-                        handleDragLeave={handleDragLeave}
-                        handleDrop={handleDrop}
-                        handleFileChange={handleFileChange}
-                        images={images}
-                        fileNames={fileNames}
-                        handleFileNameChange={handleFileNameChange}
-                        loading={loading}
-                        setLoading={setLoading}
-                        geotagged={geotagged}
-                        convertedImages={convertedImages}
-                        setConvertedImages={setConvertedImages}
-                        setGeotagged={setGeotagged}
-                        handleClear={handleClear}
-                        handleDownloadAll={handleDownloadAll}
-                        handleClearAll={handleClearAll}
-                        allConvertedAndGeotagged={allConvertedAndGeotagged}
-                        fileFormats={fileFormats}
-                        handleFormatChange={handleFormatChange}
-                        handleAddGeotag={handleAddGeotag}
-                        handleDownload={handleDownload}
-                      />
-                    } 
-                  />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                </Routes>
-                <Footer />
-              </div>
-            </Router>
-          </CreditsProvider>
+        <CreditsProvider>
+          <Router>
+            <div className="App">
+              <CMPBanner />
+              <Navbar />
+              <Routes>
+                <Route 
+                  path="/" 
+                  element={
+                    <Home 
+                      location={location}
+                      setLocation={setLocation}
+                      isDragActive={isDragActive}
+                      handleDragOver={handleDragOver}
+                      handleDragLeave={handleDragLeave}
+                      handleDrop={handleDrop}
+                      handleFileChange={handleFileChange}
+                      images={images}
+                      fileNames={fileNames}
+                      handleFileNameChange={handleFileNameChange}
+                      loading={loading}
+                      setLoading={setLoading}
+                      geotagged={geotagged}
+                      convertedImages={convertedImages}
+                      setConvertedImages={setConvertedImages}
+                      setGeotagged={setGeotagged}
+                      handleClear={handleClear}
+                      handleDownloadAll={handleDownloadAll}
+                      handleClearAll={handleClearAll}
+                      allConvertedAndGeotagged={allConvertedAndGeotagged}
+                      fileFormats={fileFormats}
+                      handleFormatChange={handleFormatChange}
+                      handleAddGeotag={handleAddGeotag}
+                      handleDownload={handleDownload}
+                    />
+                  } 
+                />
+                <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Routes>
+              <Footer />
+            </div>
+          </Router>
+        </CreditsProvider>
         </StripeProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -13,6 +13,23 @@ const hpp = require('hpp');
 const config = require('./config');
 const apiRoutes = require('./routes/api');
 const stripeRoutes = require('./routes/stripe');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK
+try {
+  // Explicitly use service account key file
+  const serviceAccount = require('./web-tagger-5155b-firebase-adminsdk-pfiqv-388df3aaeb.json'); 
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+    // You might also need projectId explicitly if the key doesn't contain it or auto-detect fails:
+    // projectId: 'web-tagger-5155b' 
+  });
+  console.log('Firebase Admin SDK Initialized Successfully with Service Account.');
+} catch (error) {
+  console.error('Firebase Admin SDK Initialization Failed:', error);
+  process.exit(1); // Exit if Firebase can't initialize
+}
 
 const app = express();
 
@@ -34,6 +51,137 @@ setInterval(() => {
 // Middleware
 app.use(helmet());
 app.use(cors());
+
+// IMPORTANT: Stripe webhook endpoint must be defined BEFORE express.json()
+// to receive the raw request body for signature verification.
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed.', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log('Stripe event received:', event.type);
+
+  // Handle the checkout.session.completed event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const userId = session.metadata.userId;
+    const priceId = session.metadata.priceId;
+
+    console.log('Processing checkout.session.completed for user:', userId, 'priceId:', priceId);
+
+    let creditsToAdd = 0;
+    // Determine credits based on priceId (ensure your .env variables are set)
+    if (priceId === process.env.STRIPE_BASIC_PRICE_ID) creditsToAdd = 150;
+    else if (priceId === process.env.STRIPE_PRO_PRICE_ID) creditsToAdd = 350;
+    else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) creditsToAdd = 1000;
+    else if (priceId === process.env.STRIPE_LIFETIME_PRICE_ID) creditsToAdd = 10000;
+
+    if (creditsToAdd > 0 && userId) {
+      try {
+        const userRef = admin.firestore().collection('users').doc(userId);
+        await userRef.update({
+          credits: admin.firestore.FieldValue.increment(creditsToAdd),
+          lastPurchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+          subscriptionStatus: 'active', // Or based on session mode
+          currentPlan: priceId
+        });
+        console.log(`Successfully added ${creditsToAdd} credits to user ${userId} for checkout session.`);
+      } catch (error) {
+        console.error('Error updating user credits after checkout:', error);
+        // Don't send 500 here, Stripe needs a 200 for successful receipt
+      }
+    } else {
+       console.warn('No credits added or userId missing for checkout.session.completed');
+    }
+  }
+
+  // Handle the invoice.payment_succeeded event (for recurring subscriptions)
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object;
+    console.log('Processing invoice.payment_succeeded:', invoice.id, 'Billing Reason:', invoice.billing_reason);
+
+    // Only process subscription cycle payments here to avoid double-counting with checkout.session.completed
+    if (invoice.billing_reason === 'subscription_cycle') {
+       const subscriptionId = invoice.subscription;
+       const customerId = invoice.customer;
+       
+       // Ensure we have line items before trying to access them
+       const lineItem = invoice.lines?.data?.[0];
+       const priceId = lineItem?.price?.id;
+
+       if (!priceId) {
+         console.error('Could not determine priceId from invoice:', invoice.id);
+         return res.status(200).json({ received: true, message: 'Skipping: Could not determine priceId.' }); 
+       }
+
+       let userId = null;
+       // Attempt to get userId from customer metadata first
+       try {
+          const customer = await stripe.customers.retrieve(customerId);
+          userId = customer.metadata?.userId;
+          console.log('Retrieved userId from customer metadata:', userId);
+       } catch (customerError) {
+          console.error('Could not retrieve customer to get userId:', customerError);
+          // Fallback: Try fetching from subscription metadata if customer retrieval fails
+          if (subscriptionId) {
+             try {
+               const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+               userId = subscription.metadata.userId;
+               console.log('Retrieved userId from subscription metadata as fallback:', userId);
+             } catch (subError) {
+               console.error('Could not retrieve subscription as fallback:', subError);
+             }
+          }
+       }
+
+       if (!userId) {
+         console.error('Could not determine userId for invoice:', invoice.id);
+         return res.status(200).json({ received: true, message: 'Skipping: Could not determine userId.' });
+       }
+
+       console.log('Processing recurring payment for user:', userId, 'priceId:', priceId);
+
+       let creditsToAdd = 0;
+       if (priceId === process.env.STRIPE_BASIC_PRICE_ID) creditsToAdd = 150;
+       else if (priceId === process.env.STRIPE_PRO_PRICE_ID) creditsToAdd = 350;
+       else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) creditsToAdd = 1000;
+
+       if (creditsToAdd > 0) {
+         try {
+           const userRef = admin.firestore().collection('users').doc(userId);
+           await userRef.update({
+             credits: admin.firestore.FieldValue.increment(creditsToAdd),
+             lastPurchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+             subscriptionStatus: 'active',
+             currentPlan: priceId // Update current plan on renewal too
+           });
+           console.log(`Successfully added ${creditsToAdd} recurring credits to user ${userId}.`);
+         } catch (error) {
+           console.error('Error updating user credits after recurring payment:', error);
+           // Don't send 500 here
+         }
+       } else {
+         console.warn('No recurring credits to add for priceId:', priceId);
+       }
+    } else {
+      console.log('Skipping invoice.payment_succeeded event (reason:', invoice.billing_reason, ') - likely handled by checkout.session.completed.');
+    }
+  }
+
+  // Acknowledge receipt of the event
+  res.status(200).json({ received: true });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -394,8 +542,10 @@ app.post('/convert', upload.single('image'), async (req, res, next) => {
 // API v1 routes
 app.use('/v1', apiRoutes);
 
-// Use Stripe routes
+// Mount Stripe routes first, so they are not affected by apiRoutes middleware
 app.use('/api/stripe', stripeRoutes);
+// Mount other API routes (excluding the webhook)
+app.use('/api', apiRoutes);
 
 // Error handler should be last
 app.use(errorHandler);

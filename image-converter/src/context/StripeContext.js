@@ -1,5 +1,6 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import { useAuth } from './AuthContext';
 
 const StripeContext = createContext();
 
@@ -8,11 +9,12 @@ export const useStripe = () => {
 };
 
 export const StripeProvider = ({ children }) => {
-  const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+  const [stripePromise] = useState(() => loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY));
+  const { user, refreshUserData } = useAuth();
 
   const initiateCheckout = async (priceId, userId) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/stripe/create-checkout-session`, {
+      const response = await fetch('http://localhost:5001/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -23,11 +25,27 @@ export const StripeProvider = ({ children }) => {
         }),
       });
 
-      const { url } = await response.json();
-      window.location.href = url;
+      const { sessionId } = await response.json();
+
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+
+      if (error) {
+        console.error('Stripe checkout error:', error);
+      } else {
+        // Payment successful, refresh user data to get updated credits
+        // Wait for webhook to process (5 seconds)
+        setTimeout(async () => {
+          await refreshUserData();
+          // Check again after 10 seconds to ensure webhook processed
+          setTimeout(async () => {
+            await refreshUserData();
+          }, 10000);
+        }, 5000);
+      }
     } catch (error) {
       console.error('Error initiating checkout:', error);
-      throw error;
     }
   };
 
