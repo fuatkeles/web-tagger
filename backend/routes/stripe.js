@@ -5,12 +5,39 @@ const admin = require('firebase-admin');
 
 // Create a Stripe checkout session
 router.post('/create-checkout-session', express.json(), async (req, res) => {
+  console.log('[create-checkout-session] Request received.'); // Log start
   try {
     const { priceId, userId } = req.body;
+    // Add detailed logging for received data and environment variables
+    console.log('[create-checkout-session] Received priceId:', priceId);
+    console.log('[create-checkout-session] Received userId:', userId);
+    console.log('[create-checkout-session] Env STRIPE_LIFETIME_PRICE_ID:', process.env.STRIPE_LIFETIME_PRICE_ID);
+    console.log('[create-checkout-session] Env FRONTEND_URL:', process.env.FRONTEND_URL);
 
-    // Check if this is a lifetime plan
-    const isLifetimePlan = priceId === process.env.STRIPE_LIFETIME_PRICE_ID;
+    // Basic validation
+    if (!priceId || !userId) {
+      console.error('[create-checkout-session] Error: Missing priceId or userId in request body.');
+      return res.status(400).json({ error: 'Missing priceId or userId' });
+    }
 
+    const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID;
+    const frontendUrl = process.env.FRONTEND_URL;
+
+    // Check if essential env vars are loaded
+    if (!lifetimePriceId || !frontendUrl) {
+       console.error('[create-checkout-session] Error: Missing STRIPE_LIFETIME_PRICE_ID or FRONTEND_URL in environment variables.');
+       return res.status(500).json({ error: 'Server configuration error: Missing environment variables.' });
+    }
+
+    const isLifetimePlan = priceId === lifetimePriceId;
+    console.log('[create-checkout-session] isLifetimePlan:', isLifetimePlan);
+
+    const successUrl = `${frontendUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${frontendUrl}/pricing?canceled=true`;
+    console.log('[create-checkout-session] Success URL:', successUrl);
+    console.log('[create-checkout-session] Cancel URL:', cancelUrl);
+
+    console.log('[create-checkout-session] Attempting to create Stripe session...');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -20,18 +47,21 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
         },
       ],
       mode: isLifetimePlan ? 'payment' : 'subscription',
-      success_url: `${process.env.FRONTEND_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/pricing?canceled=true`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         userId: userId,
         priceId: priceId
       }
     });
+    console.log('[create-checkout-session] Stripe session created successfully:', session.id);
 
     res.json({ sessionId: session.id });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: error.message });
+    // Log the specific error from Stripe or other sources
+    console.error('[create-checkout-session] Error caught:', error); 
+    const errorMessage = error.message || 'Internal server error creating checkout session.';
+    res.status(500).json({ error: errorMessage });
   }
 });
 
