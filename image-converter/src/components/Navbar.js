@@ -9,7 +9,7 @@ import './Navbar.css';
 const Navbar = () => {
   const navigate = useNavigate();
   const { isDarkMode, setIsDarkMode } = useTheme();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signInWithGoogle, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -23,7 +23,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       navigate('/');
       setIsMobileMenuOpen(false);
     } catch (error) {
