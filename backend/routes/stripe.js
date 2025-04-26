@@ -5,16 +5,19 @@ const admin = require('firebase-admin');
 
 // Create a Stripe checkout session
 router.post('/create-checkout-session', express.json(), async (req, res) => {
-  console.log('[create-checkout-session] Request received.'); // Log start
+  console.log('>>>>>>>>>>>>>>>>> [create-checkout-session] HANDLER ENTERED <<<<<<<<<<<<<<<');
+  
+  // --- Log environment variables AT REQUEST TIME --- 
+  console.log('[REQ_TIME] STRIPE_SECRET_KEY available?', !!process.env.STRIPE_SECRET_KEY);
+  console.log('[REQ_TIME] STRIPE_LIFETIME_PRICE_ID:', process.env.STRIPE_LIFETIME_PRICE_ID);
+  console.log('[REQ_TIME] FRONTEND_URL:', process.env.FRONTEND_URL);
+  // --- End Log --- 
+  
   try {
     const { priceId, userId } = req.body;
-    // Add detailed logging for received data and environment variables
     console.log('[create-checkout-session] Received priceId:', priceId);
     console.log('[create-checkout-session] Received userId:', userId);
-    console.log('[create-checkout-session] Env STRIPE_LIFETIME_PRICE_ID:', process.env.STRIPE_LIFETIME_PRICE_ID);
-    console.log('[create-checkout-session] Env FRONTEND_URL:', process.env.FRONTEND_URL);
 
-    // Basic validation
     if (!priceId || !userId) {
       console.error('[create-checkout-session] Error: Missing priceId or userId in request body.');
       return res.status(400).json({ error: 'Missing priceId or userId' });
@@ -22,22 +25,26 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
 
     const lifetimePriceId = process.env.STRIPE_LIFETIME_PRICE_ID;
     const frontendUrl = process.env.FRONTEND_URL;
-
-    // Check if essential env vars are loaded
+    
     if (!lifetimePriceId || !frontendUrl) {
-       console.error('[create-checkout-session] Error: Missing STRIPE_LIFETIME_PRICE_ID or FRONTEND_URL in environment variables.');
+       console.error('[create-checkout-session] Error: Missing STRIPE_LIFETIME_PRICE_ID or FRONTEND_URL in environment variables at request time.');
        return res.status(500).json({ error: 'Server configuration error: Missing environment variables.' });
     }
 
     const isLifetimePlan = priceId === lifetimePriceId;
-    console.log('[create-checkout-session] isLifetimePlan:', isLifetimePlan);
-
     const successUrl = `${frontendUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${frontendUrl}/pricing?canceled=true`;
-    console.log('[create-checkout-session] Success URL:', successUrl);
-    console.log('[create-checkout-session] Cancel URL:', cancelUrl);
+    
+    console.log('[create-checkout-session] PREPARING Stripe session with data:', { priceId, userId, isLifetimePlan, successUrl, cancelUrl });
 
-    console.log('[create-checkout-session] Attempting to create Stripe session...');
+    // --- Re-check secret key just before API call --- 
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('[create-checkout-session] FATAL: STRIPE_SECRET_KEY became undefined before API call!');
+      return res.status(500).json({ error: 'Server configuration error: Stripe key lost.'});
+    }
+    // --- End Check ---
+
+    console.log('[create-checkout-session] >>>>> CALLING stripe.checkout.sessions.create...');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -54,15 +61,21 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
         priceId: priceId
       }
     });
-    console.log('[create-checkout-session] Stripe session created successfully:', session.id);
+    console.log('[create-checkout-session] <<<<< RETURNED from stripe.checkout.sessions.create. Session ID:', session.id);
 
     res.json({ sessionId: session.id });
+
   } catch (error) {
-    // Log the specific error from Stripe or other sources
-    console.error('[create-checkout-session] Error caught:', error); 
+    console.error('[create-checkout-session] >>>>> CAUGHT ERROR <<<<<');
+    console.error('[create-checkout-session] Error details:', error); // Log the full error object
     const errorMessage = error.message || 'Internal server error creating checkout session.';
-    res.status(500).json({ error: errorMessage });
+    // Add more specific error checking if needed
+    if (error.type === 'StripeInvalidRequestError') {
+        console.error('[create-checkout-session] StripeInvalidRequestError - Check parameters like priceId.');
+    }
+    res.status(500).json({ error: errorMessage, type: error.type }); // Send error type back to frontend if possible
   }
+  console.log('>>>>>>>>>>>>>>>>> [create-checkout-session] HANDLER EXITING <<<<<<<<<<<<<<<');
 });
 
 // Webhook handler - MOVED TO index.js TO BE DEFINED BEFORE GLOBAL express.json()
