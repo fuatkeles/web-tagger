@@ -37,44 +37,36 @@ export const StripeProvider = ({ children }) => {
       const data = await response.json();
       console.log('Checkout response data:', data);
       
-      // More robust error handling for sessionId extraction
-      let sessionId = null;
+      // BYPASS STRIPE LIBRARY: Use the URL directly instead of the Stripe JS library
+      if (data.url && typeof data.url === 'string') {
+        console.log('Redirecting directly to URL:', data.url);
+        // Direct redirect - bypass Stripe SDK
+        window.location.href = data.url;
+        return; // Exit early to avoid Stripe SDK issues
+      }
       
+      // Fallback to sessionId approach only if URL not available
       if (data.sessionId) {
-        sessionId = data.sessionId;
-        console.log('Using sessionId directly from response');
-      } else if (data.url && typeof data.url === 'string') {
-        // Try to extract session ID from URL if available
-        const matches = data.url.match(/cs_[a-zA-Z0-9_]+/);
-        if (matches && matches.length > 0) {
-          sessionId = matches[0];
-          console.log('Extracted sessionId from URL:', sessionId);
+        console.log('Fallback: Using sessionId for redirect');
+        const stripe = await stripePromise;
+        const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+        
+        if (error) {
+          console.error('Stripe checkout error:', error);
         }
+      } else {
+        console.error('No valid URL or sessionId found in response');
+        throw new Error('Could not initiate checkout - missing redirect information');
       }
       
-      if (!sessionId) {
-        console.error('Failed to get valid sessionId. Response data:', data);
-        throw new Error('No valid session ID found in response');
-      }
-
-      console.log('Redirecting to Stripe checkout with sessionId:', sessionId);
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        console.error('Stripe checkout error:', error);
-      } else {
-        // Payment successful, refresh user data to get updated credits
-        // Wait for webhook to process (5 seconds)
+      // This will run after redirect if Stripe SDK is used
+      setTimeout(async () => {
+        await refreshUserData();
         setTimeout(async () => {
           await refreshUserData();
-          // Check again after 10 seconds to ensure webhook processed
-          setTimeout(async () => {
-            await refreshUserData();
-          }, 10000);
-        }, 5000);
-      }
+        }, 10000);
+      }, 5000);
+      
     } catch (error) {
       console.error('Error initiating checkout:', error);
     }
