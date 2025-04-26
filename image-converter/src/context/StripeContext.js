@@ -17,6 +17,8 @@ export const StripeProvider = ({ children }) => {
 
   const initiateCheckout = async (priceId, userId) => {
     try {
+      console.log('Initiating checkout with API URL:', API_URL);
+      
       const response = await fetch(`${API_URL}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: {
@@ -33,14 +35,29 @@ export const StripeProvider = ({ children }) => {
       }
 
       const data = await response.json();
+      console.log('Checkout response data:', data);
       
-      // Handle both sessionId and url response formats
-      const sessionId = data.sessionId || (data.url && data.url.match(/cs_[a-zA-Z0-9_]+/)[0]);
+      // More robust error handling for sessionId extraction
+      let sessionId = null;
+      
+      if (data.sessionId) {
+        sessionId = data.sessionId;
+        console.log('Using sessionId directly from response');
+      } else if (data.url && typeof data.url === 'string') {
+        // Try to extract session ID from URL if available
+        const matches = data.url.match(/cs_[a-zA-Z0-9_]+/);
+        if (matches && matches.length > 0) {
+          sessionId = matches[0];
+          console.log('Extracted sessionId from URL:', sessionId);
+        }
+      }
       
       if (!sessionId) {
+        console.error('Failed to get valid sessionId. Response data:', data);
         throw new Error('No valid session ID found in response');
       }
 
+      console.log('Redirecting to Stripe checkout with sessionId:', sessionId);
       // Redirect to Stripe Checkout
       const stripe = await stripePromise;
       const { error } = await stripe.redirectToCheckout({ sessionId });

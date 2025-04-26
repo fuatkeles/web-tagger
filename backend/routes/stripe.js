@@ -61,13 +61,24 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
         priceId: priceId
       }
     });
-    console.log('[create-checkout-session] <<<<< RETURNED from stripe.checkout.sessions.create. Session ID:', session.id);
+    
+    console.log('[create-checkout-session] <<<<< RETURNED from stripe.checkout.sessions.create.');
+    console.log('[create-checkout-session] Session ID:', session.id);
+    console.log('[create-checkout-session] Session URL:', session.url);
 
-    // Return BOTH sessionId and url for backward compatibility
-    res.json({ 
+    // Return ALL relevant session data for maximum compatibility
+    const responseData = { 
       sessionId: session.id,
-      url: session.url 
-    });
+      url: session.url,
+      sessionData: {
+        id: session.id,
+        object: session.object,
+        mode: session.mode
+      }
+    };
+    
+    console.log('[create-checkout-session] Sending response:', JSON.stringify(responseData));
+    res.json(responseData);
 
   } catch (error) {
     console.error('[create-checkout-session] >>>>> CAUGHT ERROR <<<<<');
