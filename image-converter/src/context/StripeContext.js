@@ -11,10 +11,13 @@ export const useStripe = () => {
 export const StripeProvider = ({ children }) => {
   const [stripePromise] = useState(() => loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY));
   const { user, refreshUserData } = useAuth();
+  
+  // Use environment variable for API URL instead of hardcoding
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
   const initiateCheckout = async (priceId, userId) => {
     try {
-      const response = await fetch('http://localhost:5001/api/stripe/create-checkout-session', {
+      const response = await fetch(`${API_URL}/api/stripe/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -24,8 +27,19 @@ export const StripeProvider = ({ children }) => {
           userId,
         }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
 
-      const { sessionId } = await response.json();
+      const data = await response.json();
+      
+      // Handle both sessionId and url response formats
+      const sessionId = data.sessionId || (data.url && data.url.match(/cs_[a-zA-Z0-9_]+/)[0]);
+      
+      if (!sessionId) {
+        throw new Error('No valid session ID found in response');
+      }
 
       // Redirect to Stripe Checkout
       const stripe = await stripePromise;

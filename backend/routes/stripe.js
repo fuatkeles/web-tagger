@@ -63,7 +63,11 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
     });
     console.log('[create-checkout-session] <<<<< RETURNED from stripe.checkout.sessions.create. Session ID:', session.id);
 
-    res.json({ sessionId: session.id });
+    // Return BOTH sessionId and url for backward compatibility
+    res.json({ 
+      sessionId: session.id,
+      url: session.url 
+    });
 
   } catch (error) {
     console.error('[create-checkout-session] >>>>> CAUGHT ERROR <<<<<');
