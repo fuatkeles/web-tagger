@@ -1,39 +1,57 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCredits } from '../context/CreditsContext';
+import { useStripe } from '../context/StripeContext';
 import { Navigate } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaCoins, FaCrown, FaCheck } from 'react-icons/fa';
 import './Dashboard.css';
 import pricingData from '../data/pricing.json';
 import PayAsYouGo from './PayAsYouGo';
 
-const PricingCard = ({ plan, price, credits, period, features, popular, lifetime }) => (
-  <div className={`pricing-card ${popular ? 'popular' : ''} ${lifetime ? 'lifetime' : ''}`}>
-    {popular && <div className="popular-badge">Most Popular</div>}
-    {lifetime && <div className="lifetime-badge">Best Value</div>}
-    <h3 className="plan-name">{plan}</h3>
-    <div className="plan-price">
-      <span className="currency">$</span>
-      <span className="amount">{price}</span>
-      {period && <span className="period">/{period}</span>}
+const PricingCard = ({ plan, price, credits, period, features, popular, lifetime, priceId }) => {
+  const { user } = useAuth();
+  const { initiateCheckout } = useStripe();
+
+  const handlePurchase = async () => {
+    try {
+      if (!priceId) {
+        console.error('No priceId provided for plan:', plan);
+        return;
+      }
+      await initiateCheckout(priceId, user.uid);
+    } catch (error) {
+      console.error('Error during checkout:', error);
+    }
+  };
+
+  return (
+    <div className={`pricing-card ${popular ? 'popular' : ''} ${lifetime ? 'lifetime' : ''}`}>
+      {popular && <div className="popular-badge">Most Popular</div>}
+      {lifetime && <div className="lifetime-badge">Best Value</div>}
+      <h3 className="plan-name">{plan}</h3>
+      <div className="plan-price">
+        <span className="currency">$</span>
+        <span className="amount">{price}</span>
+        {period && <span className="period">/{period}</span>}
+      </div>
+      <div className="credits-info">
+        <FaCoins className="credits-icon" />
+        <span>{credits}</span>
+      </div>
+      <ul className="features-list">
+        {features.map((feature, index) => (
+          <li key={index}>
+            <FaCheck className="feature-check" />
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <button className="select-plan-btn" onClick={handlePurchase}>
+        Select Plan
+      </button>
     </div>
-    <div className="credits-info">
-      <FaCoins className="credits-icon" />
-      <span>{credits}</span>
-    </div>
-    <ul className="features-list">
-      {features.map((feature, index) => (
-        <li key={index}>
-          <FaCheck className="feature-check" />
-          {feature}
-        </li>
-      ))}
-    </ul>
-    <button className="select-plan-btn">
-      Select Plan
-    </button>
-  </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
