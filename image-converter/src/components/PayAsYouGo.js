@@ -28,6 +28,7 @@ const PayAsYouGo = () => {
   const currentPrice = calculatePrice(credits);
 
   const handleBuyCreditsClick = async () => {
+    console.log("[PayAsYouGo] Buy Credits button was clicked!");
     if (!user) {
       console.error('User not signed in. Please sign in to buy credits.');
       return;
