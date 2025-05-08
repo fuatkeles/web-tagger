@@ -44,15 +44,33 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
     }
     // --- End Check ---
 
-    console.log('[create-checkout-session] >>>>> CALLING stripe.checkout.sessions.create...');
+    let lineItemsConfig; 
+    if (isLifetimePlan) {
+      console.log('[create-checkout-session] Lifetime plan detected. Using price_data AND price ID for line_items as requested.');
+      lineItemsConfig = [{
+        price: priceId,
+        price_data: { 
+          currency: 'usd',
+          product_data: {
+            name: 'Life Time',
+          },
+          unit_amount: 19999, 
+        },
+        quantity: 1,
+      }];
+    } else {
+      console.log('[create-checkout-session] Subscription plan detected. Using price ID for line_items.');
+      lineItemsConfig = [{
+        price: priceId,
+        quantity: 1,
+      }];
+    }
+
+    console.log('[create-checkout-session] >>>>> CALLING stripe.checkout.sessions.create with lineItems:', JSON.stringify(lineItemsConfig));
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      currency: 'usd',
+      line_items: lineItemsConfig,
       mode: isLifetimePlan ? 'payment' : 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,

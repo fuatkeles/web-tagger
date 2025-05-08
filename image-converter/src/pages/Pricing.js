@@ -13,6 +13,7 @@ const PricingCard = ({ plan, price, credits, period, features, popular, lifetime
   const navigate = useNavigate();
 
   const handleClick = async () => {
+    console.log(`Attempting checkout for plan: ${plan}, priceId: ${priceId}`);
     if (!user) {
       await signInWithGoogle();
       return;
