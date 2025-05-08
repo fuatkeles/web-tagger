@@ -51,7 +51,19 @@ setInterval(() => {
 }, 60 * 60 * 1000); // Every hour
 
 // Middleware
-app.use(helmet()); // Reverted to original helmet call
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        // Add other directives if needed, for example for Stripe:
+        // "frame-src": ["'self'", "https://checkout.stripe.com", "https://js.stripe.com"],
+        // "connect-src": ["'self'", "https://api.stripe.com", "https://checkout.stripe.com"],
+      },
+    },
+  })
+);
 app.use(cors());
 
 // IMPORTANT: Stripe webhook endpoint must be defined BEFORE express.json()
