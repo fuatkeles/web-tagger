@@ -110,6 +110,62 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
   console.log('>>>>>>>>>>>>>>>>> [create-checkout-session] HANDLER EXITING <<<<<<<<<<<<<<<');
 });
 
+// Create a Pay As You Go Stripe checkout session
+router.post('/create-payg-checkout-session', express.json(), async (req, res) => {
+  console.log('>>>>>>>>>>>>>>>>> [create-payg-checkout-session] HANDLER ENTERED <<<<<<<<<<<<<<<');
+  try {
+    const { creditsToPurchase, amountInCents, userId } = req.body;
+    console.log('[create-payg-checkout-session] Received data:', { creditsToPurchase, amountInCents, userId });
+
+    if (!userId || !creditsToPurchase || amountInCents === undefined || amountInCents <= 0) {
+      console.error('[create-payg-checkout-session] Error: Missing or invalid parameters.');
+      return res.status(400).json({ error: 'Missing or invalid parameters for Pay As You Go session' });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+       console.error('[create-payg-checkout-session] Error: Missing FRONTEND_URL in environment variables.');
+       return res.status(500).json({ error: 'Server configuration error: Missing FRONTEND_URL.' });
+    }
+
+    const successUrl = `${frontendUrl}/dashboard?payg_success=true&credits_added=${creditsToPurchase}`;
+    const cancelUrl = `${frontendUrl}/pricing?payg_canceled=true`;
+
+    console.log('[create-payg-checkout-session] >>>>> CALLING stripe.checkout.sessions.create for PAYG...');
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Pay As You Go Credits',
+            },
+            unit_amount: amountInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        userId: userId,
+        creditsPurchased: creditsToPurchase.toString(), // Stripe metadata values must be strings
+        paymentType: 'payAsYouGo',
+      },
+    });
+
+    console.log('[create-payg-checkout-session] <<<<< RETURNED from stripe.checkout.sessions.create for PAYG.');
+    res.json({ sessionId: session.id, url: session.url });
+
+  } catch (error) {
+    console.error('[create-payg-checkout-session] >>>>> CAUGHT ERROR <<<<<', error);
+    res.status(500).json({ error: error.message || 'Internal server error creating PAYG checkout session' });
+  }
+  console.log('>>>>>>>>>>>>>>>>> [create-payg-checkout-session] HANDLER EXITING <<<<<<<<<<<<<<<');
+});
+
 // Webhook handler - MOVED TO index.js TO BE DEFINED BEFORE GLOBAL express.json()
 /*
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {

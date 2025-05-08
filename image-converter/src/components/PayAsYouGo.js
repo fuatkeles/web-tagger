@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import * as Slider from '@radix-ui/react-slider';
 import './PayAsYouGo.css';
+import { useStripe } from '../context/StripeContext';
+import { useAuth } from '../context/AuthContext';
 
 const PayAsYouGo = () => {
   const MIN_CREDITS = 300;
   const MAX_CREDITS = 3000;
   const STEP = 30;
   const [credits, setCredits] = useState(MIN_CREDITS);
+  const { user } = useAuth();
+  const { initiatePayAsYouGoCheckout } = useStripe();
 
   const handleInputChange = (e) => {
     let value = Number(e.target.value);
@@ -17,9 +21,19 @@ const PayAsYouGo = () => {
   };
 
   const calculatePrice = (creditAmount) => {
-    // Linear interpolation between (300, 10) and (3000, 150)
     const price = 10 + (creditAmount - 300) * (150 - 10) / (3000 - 300);
-    return price.toFixed(2);
+    return parseFloat(price.toFixed(2));
+  };
+
+  const currentPrice = calculatePrice(credits);
+
+  const handleBuyCreditsClick = async () => {
+    if (!user) {
+      console.error('User not signed in. Please sign in to buy credits.');
+      return;
+    }
+    console.log(`Attempting to buy ${credits} credits for $${currentPrice} by user ${user.uid}`);
+    await initiatePayAsYouGoCheckout(credits, currentPrice, user.uid);
   };
 
   return (
@@ -69,10 +83,10 @@ const PayAsYouGo = () => {
 
       <div className="total-price">
         <span className="total-price-label">TOTAL PRICE</span>
-        <span className="price-amount">${calculatePrice(credits)}</span>
+        <span className="price-amount">${currentPrice}</span>
       </div>
 
-      <button className="buy-credits-btn">
+      <button className="buy-credits-btn" onClick={handleBuyCreditsClick}>
         Buy Credits
       </button>
     </div>

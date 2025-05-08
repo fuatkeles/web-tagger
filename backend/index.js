@@ -77,33 +77,51 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const userId = session.metadata.userId;
-    const priceId = session.metadata.priceId;
 
-    console.log('Processing checkout.session.completed for user:', userId, 'priceId:', priceId);
-
-    let creditsToAdd = 0;
-    // Determine credits based on priceId (ensure your .env variables are set)
-    if (priceId === process.env.STRIPE_BASIC_PRICE_ID) creditsToAdd = 150;
-    else if (priceId === process.env.STRIPE_PRO_PRICE_ID) creditsToAdd = 350;
-    else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) creditsToAdd = 1000;
-    else if (priceId === process.env.STRIPE_LIFETIME_PRICE_ID) creditsToAdd = 10000;
-
-    if (creditsToAdd > 0 && userId) {
-      try {
-        const userRef = admin.firestore().collection('users').doc(userId);
-        await userRef.update({
-          credits: admin.firestore.FieldValue.increment(creditsToAdd),
-          lastPurchaseDate: admin.firestore.FieldValue.serverTimestamp(),
-          subscriptionStatus: 'active', // Or based on session mode
-          currentPlan: priceId
-        });
-        console.log(`Successfully added ${creditsToAdd} credits to user ${userId} for checkout session.`);
-      } catch (error) {
-        console.error('Error updating user credits after checkout:', error);
-        // Don't send 500 here, Stripe needs a 200 for successful receipt
+    if (session.metadata.paymentType === 'payAsYouGo') {
+      console.log('[Webhook] Processing Pay As You Go checkout.session.completed for user:', userId);
+      const creditsPurchased = parseInt(session.metadata.creditsPurchased, 10);
+      if (creditsPurchased > 0 && userId) {
+        try {
+          const userRef = admin.firestore().collection('users').doc(userId);
+          await userRef.update({
+            credits: admin.firestore.FieldValue.increment(creditsPurchased),
+            lastPurchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+            // No subscriptionStatus or currentPlan update for PAYG typically
+          });
+          console.log(`[Webhook] Successfully added ${creditsPurchased} PAYG credits to user ${userId}.`);
+        } catch (error) {
+          console.error('[Webhook] Error updating user credits after PAYG checkout:', error);
+        }
+      } else {
+        console.warn('[Webhook] No PAYG credits to add or userId missing for checkout.session.completed');
       }
     } else {
-       console.warn('No credits added or userId missing for checkout.session.completed');
+      // Existing logic for subscription plans
+      const priceId = session.metadata.priceId; // Get priceId for subscription plans
+      console.log('[Webhook] Processing subscription checkout.session.completed for user:', userId, 'priceId:', priceId);
+      let creditsToAdd = 0;
+      if (priceId === process.env.STRIPE_BASIC_PRICE_ID) creditsToAdd = 150;
+      else if (priceId === process.env.STRIPE_PRO_PRICE_ID) creditsToAdd = 350;
+      else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) creditsToAdd = 1000;
+      else if (priceId === process.env.STRIPE_LIFETIME_PRICE_ID) creditsToAdd = 10000; // One-time payment, but handled here if not PAYG
+
+      if (creditsToAdd > 0 && userId) {
+        try {
+          const userRef = admin.firestore().collection('users').doc(userId);
+          await userRef.update({
+            credits: admin.firestore.FieldValue.increment(creditsToAdd),
+            lastPurchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+            subscriptionStatus: 'active', 
+            currentPlan: priceId
+          });
+          console.log(`[Webhook] Successfully added ${creditsToAdd} credits to user ${userId} for checkout session.`);
+        } catch (error) {
+          console.error('[Webhook] Error updating user credits after checkout:', error);
+        }
+      } else {
+         console.warn('[Webhook] No credits added or userId missing for subscription checkout.session.completed');
+      }
     }
   }
 

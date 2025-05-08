@@ -79,8 +79,57 @@ export const StripeProvider = ({ children }) => {
     }
   };
 
+  const initiatePayAsYouGoCheckout = async (creditsToPurchase, price, userId) => {
+    try {
+      const amountInCents = Math.round(price * 100);
+      console.log(`[StripeContext] initiatePayAsYouGoCheckout called. User: ${userId}, Credits: ${creditsToPurchase}, Amount (cents): ${amountInCents}`);
+      
+      const response = await fetch(`${API_URL}/api/stripe/create-payg-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          creditsToPurchase,
+          amountInCents,
+          userId,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status} for PAYG session`);
+      }
+
+      const data = await response.json();
+      console.log('[StripeContext] PAYG Checkout response data:', data);
+      
+      if (data.url && typeof data.url === 'string') {
+        console.log('[StripeContext] Redirecting directly to PAYG URL:', data.url);
+        window.location.href = data.url;
+        return;
+      }
+      
+      if (data.sessionId) {
+        console.log('[StripeContext] Fallback: Using PAYG sessionId for redirect');
+        const stripe = await stripePromise;
+        const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+        
+        if (error) {
+          console.error('[StripeContext] PAYG Stripe checkout error:', error);
+        }
+      } else {
+        console.error('[StripeContext] No valid URL or sessionId found in PAYG response');
+        throw new Error('Could not initiate PAYG checkout - missing redirect information');
+      }
+      // No need for refreshUserData here as credits are handled by webhook
+    } catch (error) {
+      console.error('[StripeContext] Error initiating PAYG checkout:', error);
+    }
+  };
+
   const value = {
     initiateCheckout,
+    initiatePayAsYouGoCheckout,
   };
 
   return (
