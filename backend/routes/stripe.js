@@ -46,9 +46,8 @@ router.post('/create-checkout-session', express.json(), async (req, res) => {
 
     let lineItemsConfig; 
     if (isLifetimePlan) {
-      console.log('[create-checkout-session] Lifetime plan detected. Using price_data AND price ID for line_items as requested.');
+      console.log('[create-checkout-session] Lifetime plan detected. Using ONLY price_data for line_items.');
       lineItemsConfig = [{
-        price: priceId,
         price_data: { 
           currency: 'usd',
           product_data: {

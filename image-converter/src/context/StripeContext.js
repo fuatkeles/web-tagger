@@ -16,10 +16,17 @@ export const StripeProvider = ({ children }) => {
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
   const initiateCheckout = async (priceId, userId) => {
+    const fullPath = `${API_URL}/api/stripe/create-checkout-session`;
+    console.log(
+      `[StripeContext] initiateCheckout çağrıldı. Gelen priceId: ${priceId}`
+    );
+    console.log(`[StripeContext] Anlık API_URL değeri: ${API_URL}`);
+    console.log(`[StripeContext] Fetch için oluşturulan tam URL: ${fullPath}`);
+
     try {
       console.log('Initiating checkout with API URL:', API_URL);
       
-      const response = await fetch(`${API_URL}/api/stripe/create-checkout-session`, {
+      const response = await fetch(fullPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
