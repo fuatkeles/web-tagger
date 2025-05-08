@@ -51,7 +51,12 @@ setInterval(() => {
 }, 60 * 60 * 1000); // Every hour
 
 // Middleware
-app.use(helmet());
+// app.use(helmet()); // Comment out or replace existing helmet call
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Temporarily disable CSP from helmet for diagnosis
+  })
+);
 app.use(cors());
 
 // IMPORTANT: Stripe webhook endpoint must be defined BEFORE express.json()
